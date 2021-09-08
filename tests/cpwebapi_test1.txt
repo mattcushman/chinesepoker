@@ -1,0 +1,55 @@
+curl -i -H "Content-Type: application/json" -X POST -d '{"name":"odin"}' http://localhost:105/newplayer/
+curl -i -H "Content-Type: application/json" -X POST -d '{"name":"zeus"}' http://localhost:105/newplayer/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"playerid":0}' http://localhost:105/joinnextgame/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"playerid":0}' http://localhost:105/makeready/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"playerid":1}' http://localhost:105/joinnextgame/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"playerid":1}' http://localhost:105/makeready/
+curl -i -H "Content-Type: application/json" -X GET -d '{"gameid":0}' http://localhost:105/getgamestate/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[0,2,3]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X GET -d '{"gameid":0}' http://localhost:105/getgamestate/
+#{"hands":{"0":[6,8,12,21,25,26,28,30,35,38,39,44,47],"1":[4,5,15,19,20,22,31,33,40,46]},"last_move":{"0":[0,2,3],"1":[]},"players":[0,1],"to_move":0,"winner":-1}
+
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X GET -d '{"gameid":0}' http://localhost:105/getgamestate/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[4,5]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X GET -d '{"gameid":0}' http://localhost:105/getgamestate/
+
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[25,26]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X GET -d '{"gameid":0}' http://localhost:105/getgamestate/
+
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X GET -d '{"gameid":0}' http://localhost:105/getgamestate/
+
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[28,30]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X GET -d '{"gameid":0}' http://localhost:105/getgamestate/
+
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[38,39]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X GET -d '{"gameid":0}' http://localhost:105/getgamestate/
+
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[6]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X GET -d '{"gameid":0}' http://localhost:105/getgamestate/
+
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[15]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[21]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X GET -d '{"gameid":0}' http://localhost:105/getgamestate/
+#{"hands":{"0":[8,12,35,44,47],"1":[19,20,22,31,33,40,46]},"last_move":{"0":[21],"1":[15]},"players":[0,1],"to_move":1,"winner":-1}
+
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[31]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[35]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[40]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[20,22]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[44,47]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X GET -d '{"gameid":0}' http://localhost:105/getgamestate/
+
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[8]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[33]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[19]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X GET -d '{"gameid":0}' http://localhost:105/getgamestate/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[46]}' http://localhost:105/implementmove/
+curl -i -H "Content-Type: application/json" -X GET -d '{"gameid":0}' http://localhost:105/getgamestate/

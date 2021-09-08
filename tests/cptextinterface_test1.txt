@@ -1,0 +1,7 @@
+newPlayer
+newPlayer
+joinNextGame 1
+joinNextGame 0
+makeReady 0
+makeReady 1
+getGameState 0
