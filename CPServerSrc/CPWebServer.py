@@ -1,8 +1,11 @@
+import logging
+
 from flask import Flask,request,jsonify
 from cpGameManager import CPGameManager, NoActiveGameException
 
 
 app = Flask(__name__)
+app.logger.setLevel(logging.DEBUG)
 
 gm = CPGameManager(seed=12345)
 
@@ -11,12 +14,14 @@ def apiNewPlayer():
     if not request.json or not 'name' in request.json:
         return "Could not parse newplayer", 400
     newPlayerId=gm.newPlayer(request.json['name'])
+    app.logger.info(f"Created newplayer {newPlayerId} {request.json['name']}")
     return jsonify(newPlayerId), 201
 
 @app.route('/joinnextgame/', methods=['PUT'])
 def apiJoinNextyGame():
     playerId=request.json['playerid']
     joinGame=gm.joinNextGame(playerId)
+    app.logger.info(f"Join game {playerId} {joinGame}")
     return jsonify(joinGame)
 
 

@@ -1,0 +1,70 @@
+[gd_scene load_steps=4 format=2]
+
+[ext_resource path="res://MainScreen.gd" type="Script" id=1]
+
+[sub_resource type="ShaderMaterial" id=1]
+
+[sub_resource type="CanvasItemMaterial" id=2]
+next_pass = SubResource( 1 )
+particles_animation = true
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[node name="MainScreen" type="CanvasLayer"]
+script = ExtResource( 1 )
+
+[node name="JoinGameButton" type="Button" parent="."]
+material = SubResource( 2 )
+anchor_left = 0.356
+anchor_top = 0.294
+anchor_right = 0.484
+anchor_bottom = 0.5
+margin_left = -147.096
+margin_top = 253.896
+margin_right = -162.168
+margin_bottom = 247.296
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="NewPlayerHTTPRequest" type="HTTPRequest" parent="."]
+
+[node name="NameInputField" type="LineEdit" parent="."]
+anchor_right = 0.587
+anchor_bottom = 0.129
+margin_left = 194.075
+margin_top = 67.5509
+margin_right = 199.987
+margin_bottom = 84.1509
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="JoinGameHTTPRequest" type="HTTPRequest" parent="."]
+
+[node name="MakeReadyButton" type="Button" parent="."]
+margin_left = 383.861
+margin_top = 432.112
+margin_right = 535.861
+margin_bottom = 528.112
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="MakeReadyHTTPRequest" type="HTTPRequest" parent="."]
+
+[node name="TickTimer" type="Timer" parent="."]
+wait_time = 2.094
+autostart = true
+
+[node name="GameStateHTTPRequest" type="HTTPRequest" parent="."]
+
+[connection signal="pressed" from="JoinGameButton" to="." method="_on_TextureButton_pressed"]
+[connection signal="request_completed" from="NewPlayerHTTPRequest" to="." method="_on_NewPlayerHTTPRequest_request_completed"]
+[connection signal="request_completed" from="NewPlayerHTTPRequest" to="." method="_on_HTTPRequest_request_completed"]
+[connection signal="text_entered" from="NameInputField" to="." method="_on_NameInputField_text_entered"]
+[connection signal="request_completed" from="JoinGameHTTPRequest" to="." method="_on_JoinGameHTTPRequest_request_completed"]
+[connection signal="pressed" from="MakeReadyButton" to="." method="_on_MakeReadyButton_pressed"]
+[connection signal="request_completed" from="MakeReadyHTTPRequest" to="." method="_on_MakeReadyHTTPRequest_request_completed"]
+[connection signal="timeout" from="TickTimer" to="." method="_on_TickTimer_timeout"]

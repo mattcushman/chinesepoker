@@ -43,7 +43,7 @@ class CPGameManager():
         if len(self.pendingGame)<4 and (playerId not in self.pendingGame):
             self.pendingGame.add(playerId)
             self.ready[playerId]=False
-            return True
+            return self.nextGameId
         else:
             raise GameJoinError(f"{playerId} Cant join game")
     def makeReady(self,playerId):
@@ -72,11 +72,17 @@ class CPGameManager():
             self.activeGames.remove(gameId)
         return True
     def getGameState(self, gameId):
-        if gameId not in self.games:
+        if gameId==self.nextGameId:
+            return {'active':False,
+                    'player_ready':self.ready,
+                    'player_names':{k:self.players[k].name for k in self.players.keys()}
+                    }
+        elif gameId not in self.games:
             raise NoActiveGameException(gameId)
         else:
             game=self.games[gameId]
-            return {'winner': int(game.winner),
+            return {'active':True,
+                    'winner': int(game.winner),
                     'to_move': int(game.toMove),
                     'last_move': {playerId:game.getLastMove(playerId)
                                   for playerId in game.players},
