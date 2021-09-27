@@ -59,5 +59,4 @@ if __name__ == '__main__':
         host='0.0.0.0'
     if port==None:
         port=105
-    host=os.getenv('CP_PORfixed T')
     app.run(host=host, port=port)
