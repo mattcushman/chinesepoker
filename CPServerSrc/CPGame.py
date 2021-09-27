@@ -61,10 +61,9 @@ class CPGame():
         if len(self.playerMoves)==0:
             if not min(self.hands[self.toMove]) in move:
                 raise MoveError("Move doesnt contain smallest card", move)
-            else:
-                self.doMove(move)
-            return True
-        (lastRealPlayer,lastRealMove) = [pm for pm in self.playerMoves if len(pm[1])>0][-1]
+            (lastRealPlayer, lastRealMove)=(self.toMove,[])
+        else:
+            (lastRealPlayer,lastRealMove) = [pm for pm in self.playerMoves if len(pm[1])>0][-1]
         if len(move)==0 and (lastRealPlayer!=self.toMove):
             self.doMove([])
             return True

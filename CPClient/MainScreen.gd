@@ -54,7 +54,7 @@ func _on_GameStateHTTPRequest_request_completed(result, response_code, headers, 
 		$PlayeList.clear()
 		for p in json.result['player_names']:
 			var name = json.result['player_names'][p]
-			if json.result['player_ready'][p]:
+			if p in json.result['player_ready'] and json.result['player_ready'][p]:
 				name = ' * '+name
 			else:
 				name = '   '+name
