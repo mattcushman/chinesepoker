@@ -1,6 +1,8 @@
+HOST=localhost:105
+HOST=172.104.211.116:5051
 
-curl -i -H "Content-Type: application/json" -X POST -d '{"name":"zeus"}' http://localhost:105/newplayer/
+curl -i -H "Content-Type: application/json" -X POST -d '{"name":"zeus"}' http://${HOST}/newplayer/
 sleep 1
-curl -i -H "Content-Type: application/json" -X PUT -d '{"playerid":1}' http://localhost:105/joinnextgame/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"playerid":1}' http://${HOST}/joinnextgame/
 sleep 1
-curl -i -H "Content-Type: application/json" -X PUT -d '{"playerid":1}' http://localhost:105/makeready/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"playerid":1}' http://${HOST}/makeready/

@@ -1,6 +1,7 @@
 extends Node
 
-var url = "http://localhost:105/"
+#var url = "http://localhost:105/"
+var url = "http://172.104.211.116:5051"
 var headers = ["Content-Type: application/json"]
  
 var suiteNameOld = ["Diamonds", "Clubs", "Hearts", "Spades"]

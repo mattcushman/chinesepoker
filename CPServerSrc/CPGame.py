@@ -58,9 +58,6 @@ class CPGame():
     def implementMove(self, move):
         if not all(c in self.hands[self.toMove] for c in move):
             raise MoveError("Not all cards are in hand", move)
-        moveSignature = computeMoveSignature(move)
-        if not moveSignature:
-            raise MoveError("Not valid move", move)
         if len(self.playerMoves)==0:
             if not min(self.hands[self.toMove]) in move:
                 raise MoveError("Move doesnt contain smallest card", move)
@@ -71,6 +68,9 @@ class CPGame():
         if len(move)==0 and (lastRealPlayer!=self.toMove):
             self.doMove([])
             return True
+        moveSignature = computeMoveSignature(move)
+        if not sum(moveSignature>0):
+            raise MoveError("Not valid move", move)
         if lastRealPlayer==self.toMove or all([x>=y for (x,y) in zip(moveSignature, computeMoveSignature(lastRealMove))]):
             self.doMove(move)
             return True
