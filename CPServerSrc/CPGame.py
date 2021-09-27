@@ -68,7 +68,7 @@ class CPGame():
             self.doMove([])
             return True
         moveSignature = computeMoveSignature(move)
-        if not sum(moveSignature>0):
+        if not sum(moveSignature)>0:
             raise MoveError("Not valid move", move)
         if lastRealPlayer==self.toMove or all([x>=y for (x,y) in zip(moveSignature, computeMoveSignature(lastRealMove))]):
             self.doMove(move)
