@@ -8,37 +8,37 @@ class MoveError(Exception):
 def computeMoveSignature(hand):
     sig=[]
     if len(hand)==1:
-        sig.append(hand[-1])
+        sig.append(1+hand[-1])
     else:
         sig.append(0)
     if len(hand)==2 and (hand[0]//4==hand[1]//4):
-        sig.append(hand[-1])
+        sig.append(1+hand[-1])
     else:
         sig.append(0)
     if len(hand) == 3 and (hand[0] // 4 == hand[1] // 4 and hand[1]//4==hand[2]//4):
-        sig.append(hand[-1])
+        sig.append(1+hand[-1])
     else:
         sig.append(0)
     if len(hand) == 4 and (hand[0] // 4 == hand[1] // 4 and hand[1] // 4 == hand[2] // 4 and hand[2] // 4 == hand[3] // 4):
-        sig.append(hand[-1])
+        sig.append(1+hand[-1])
     else:
         sig.append(0)
     if len(hand) == 5 and ( hand[0] // 4 == hand[1] // 4 and hand[1] // 4 == hand[2] // 4 and hand[3] // 4 == hand[4] // 4):
-        sig.append(hand[2])
+        sig.append(1+hand[2])
     else:
         sig.append(0)
     if len(hand) == 5 and ( hand[0] // 4 == hand[1] // 4 and hand[2] // 4 == hand[3] // 4 and hand[3] // 4 == hand[4] // 4):
-        sig.append(hand[2])
+        sig.append(1+hand[2])
     else:
         sig.append(0)
     if len(hand) == 5 and ( hand[0] // 4 +1== hand[1] // 4 and hand[1] // 4 +1== hand[2] // 4
                             and hand[2]+1 // 4 == hand[3] // 4 and hand[3]+1 // 4 == hand[4] // 4):
-        sig.append(hand[-1])
+        sig.append(1+hand[-1])
     else:
         sig.append(0)
     if len(hand) == 5 and ( hand[0] % 4 == hand[1] % 4 and hand[1] % 4 == hand[2] % 4
                             and hand[2] % 4 == hand[3] % 4 and hand[3] % 4 == hand[4] % 4):
-        sig.append(hand[-1])
+        sig.append(1+hand[-1])
     else:
         sig.append(0)
     return sig

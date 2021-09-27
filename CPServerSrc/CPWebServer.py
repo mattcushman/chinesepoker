@@ -40,6 +40,8 @@ def apiImplementMove():
         gameId=int(request.json['gameid'])
         move=list(request.json['move'])
         return jsonify(gm.implementMove(gameId,move)), 200
+    except MoveError as merr:
+        return "MoveError {merr.move} {merr.msg}", 406
     except:
         return "Move Error", 400
 
