@@ -1,4 +1,5 @@
 import logging
+import os
 
 from flask import Flask,request,jsonify
 from cpGameManager import CPGameManager, NoActiveGameException
@@ -52,4 +53,10 @@ def apiGetGameState():
     except NoActiveGameException(gameId):
         return "Could not find gameid", 400
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=105)
+    host=os.getenv('CP_HOST')
+    if host==None:
+        host='0.0.0.0'
+    if port==None:
+        port=105
+    host=os.getenv('CP_POST')
+    app.run(host=host, port=port)
