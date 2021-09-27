@@ -14,6 +14,18 @@ particles_anim_loop = false
 [node name="MainScreen" type="CanvasLayer"]
 script = ExtResource( 1 )
 
+[node name="ReadyListLabel" type="Label" parent="."]
+margin_left = 636.769
+margin_top = 307.746
+margin_right = 858.769
+margin_bottom = 338.746
+text = "Ready People Liberation Army
+"
+align = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
 [node name="JoinGameButton" type="Button" parent="."]
 material = SubResource( 2 )
 anchor_left = 0.356
@@ -24,6 +36,7 @@ margin_left = -147.096
 margin_top = 253.896
 margin_right = -162.168
 margin_bottom = 247.296
+text = "Join Game"
 __meta__ = {
 "_edit_use_anchors_": false
 }
@@ -33,10 +46,11 @@ __meta__ = {
 [node name="NameInputField" type="LineEdit" parent="."]
 anchor_right = 0.587
 anchor_bottom = 0.129
-margin_left = 194.075
-margin_top = 67.5509
-margin_right = 199.987
-margin_bottom = 84.1509
+margin_left = 470.997
+margin_top = 200.768
+margin_right = 184.909
+margin_bottom = 165.368
+max_length = 32
 __meta__ = {
 "_edit_use_anchors_": false
 }
@@ -44,10 +58,11 @@ __meta__ = {
 [node name="JoinGameHTTPRequest" type="HTTPRequest" parent="."]
 
 [node name="MakeReadyButton" type="Button" parent="."]
-margin_left = 383.861
+margin_left = 384.289
 margin_top = 432.112
-margin_right = 535.861
+margin_right = 536.289
 margin_bottom = 528.112
+text = "I'm ready...."
 __meta__ = {
 "_edit_use_anchors_": false
 }
@@ -60,11 +75,45 @@ autostart = true
 
 [node name="GameStateHTTPRequest" type="HTTPRequest" parent="."]
 
+[node name="Label" type="Label" parent="."]
+margin_left = 152.749
+margin_top = 51.6603
+margin_right = 807.749
+margin_bottom = 116.66
+text = "Welcome to Chairman Matt's.
+** Chinese Poker **
+
+\"Uphold Xi Jinping Thought\""
+align = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="PlayeList" type="ItemList" parent="."]
+margin_left = 651.0
+margin_top = 342.0
+margin_right = 836.0
+margin_bottom = 478.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="NameEnterLabel" type="Label" parent="."]
+margin_left = 348.851
+margin_top = 213.283
+margin_right = 458.851
+margin_bottom = 227.283
+text = "Enter name here:"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
 [connection signal="pressed" from="JoinGameButton" to="." method="_on_TextureButton_pressed"]
-[connection signal="request_completed" from="NewPlayerHTTPRequest" to="." method="_on_NewPlayerHTTPRequest_request_completed"]
 [connection signal="request_completed" from="NewPlayerHTTPRequest" to="." method="_on_HTTPRequest_request_completed"]
+[connection signal="request_completed" from="NewPlayerHTTPRequest" to="." method="_on_NewPlayerHTTPRequest_request_completed"]
 [connection signal="text_entered" from="NameInputField" to="." method="_on_NameInputField_text_entered"]
 [connection signal="request_completed" from="JoinGameHTTPRequest" to="." method="_on_JoinGameHTTPRequest_request_completed"]
 [connection signal="pressed" from="MakeReadyButton" to="." method="_on_MakeReadyButton_pressed"]
 [connection signal="request_completed" from="MakeReadyHTTPRequest" to="." method="_on_MakeReadyHTTPRequest_request_completed"]
 [connection signal="timeout" from="TickTimer" to="." method="_on_TickTimer_timeout"]
+[connection signal="request_completed" from="GameStateHTTPRequest" to="." method="_on_GameStateHTTPRequest_request_completed"]

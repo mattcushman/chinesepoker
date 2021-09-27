@@ -86,8 +86,10 @@ class CPGameManager():
                     'to_move': int(game.toMove),
                     'last_move': {playerId:game.getLastMove(playerId)
                                   for playerId in game.players},
-                    'hands': {player:sorted(list(game.hands[i])) for i,player in enumerate(game.players)},
-                    'players': list(game.players)
+                    'hands': {player:sorted(list(game.hands[player])) for player in game.players},
+                    'players': list(game.players),
+                    'player_names':{k:self.players[k].name for k in game.players}
+
                     }
 
 

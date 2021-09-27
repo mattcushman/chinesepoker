@@ -1,0 +1,6 @@
+
+curl -i -H "Content-Type: application/json" -X POST -d '{"name":"zeus"}' http://localhost:105/newplayer/
+sleep 1
+curl -i -H "Content-Type: application/json" -X PUT -d '{"playerid":1}' http://localhost:105/joinnextgame/
+sleep 1
+curl -i -H "Content-Type: application/json" -X PUT -d '{"playerid":1}' http://localhost:105/makeready/

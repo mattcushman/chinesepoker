@@ -49,7 +49,7 @@ def apiGetGameState():
     try:
         gameId=int(request.json['gameid'])
         return jsonify(gm.getGameState(gameId)), 200
-    except NoActiveGameException(gameIdFailed):
+    except NoActiveGameException(gameId):
         return "Could not find gameid", 400
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=105)
