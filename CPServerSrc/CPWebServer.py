@@ -54,6 +54,7 @@ def apiGetGameState():
         return "Could not find gameid", 400
 if __name__ == '__main__':
     host=os.getenv('CP_HOST')
+    port=os.getenv('CP_PORT')
     if host==None:
         host='0.0.0.0'
     if port==None:
