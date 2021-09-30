@@ -2,7 +2,7 @@ import logging
 import os
 
 from flask import Flask,request,jsonify
-from cpGameManager import CPGameManager, NoActiveGameException
+from cpGameManager import CPGameManager, NoActiveGameException, JoinGameError
 from CPGame import MoveError
 
 
@@ -22,8 +22,12 @@ def apiNewPlayer():
 @app.route('/joinnextgame/', methods=['PUT'])
 def apiJoinNextyGame():
     playerId=request.json['playerid']
-    joinGame=gm.joinNextGame(playerId)
-    app.logger.info(f"Join game {playerId} {joinGame}")
+    try:
+        joinGame=gm.joinNextGame(playerId)
+    except JoinGameError as jge:
+        app.logger.info(f"Join Game error {jge.msg}")
+        return
+    app.logger.error(f"Join game {playerId} {joinGame}")
     return jsonify(joinGame)
 
 
@@ -42,7 +46,8 @@ def apiImplementMove():
         move=list(request.json['move'])
         return jsonify(gm.implementMove(gameId,move)), 200
     except MoveError as merr:
-        return "MoveError {merr.move} {merr.msg}", 406
+        app.logger.error(f"MoveError {merr.move} {merr.msg}")
+        return f"MoveError {merr.move} {merr.msg}", 406
     except:
         return "Move Error", 400
 

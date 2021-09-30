@@ -45,7 +45,7 @@ class CPGameManager():
             self.ready[playerId]=False
             return self.nextGameId
         else:
-            raise GameJoinError(f"{playerId} Cant join game")
+            raise JoinGameError(f"{playerId} Cant join game")
     def makeReady(self,playerId):
         if playerId not in self.ready:
             raise MakeReadyError(f"{playerId} Not in game")
