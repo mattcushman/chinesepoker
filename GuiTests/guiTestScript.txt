@@ -1,0 +1,21 @@
+bash ../tests/cpnewplayer2startgame_init.txt 
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[0,2]}' http://172.104.211.116:5051/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[25,26]}' http://172.104.211.116:5051/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[]}' http://172.104.211.116:5051/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[6]}' http://172.104.211.116:5051/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[]}' http://172.104.211.116:5051/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[8]}' http://172.104.211.116:5051/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[]}' http://172.104.211.116:5051/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[12]}' http://172.104.211.116:5051/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[]}' http://172.104.211.116:5051/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[35]}' http://172.104.211.116:5051/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[]}' http://172.104.211.116:5051/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[38,39]}' http://172.104.211.116:5051/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[]}' http://172.104.211.116:5051/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[21]}' http://172.104.211.116:5051/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[]}' http://172.104.211.116:5051/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[28]}' http://172.104.211.116:5051/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[]}' http://172.104.211.116:5051/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[30]}' http://172.104.211.116:5051/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[]}' http://172.104.211.116:5051/implementmove/
+curl -i -H "Content-Type: application/json" -X PUT -d '{"gameid":0, "move":[44,47]}' http://172.104.211.116:5051/implementmove/
