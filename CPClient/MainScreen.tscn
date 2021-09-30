@@ -1,6 +1,9 @@
-[gd_scene load_steps=4 format=2]
+[gd_scene load_steps=8 format=2]
 
 [ext_resource path="res://MainScreen.gd" type="Script" id=1]
+[ext_resource path="res://royal-flush_1900x770.jpeg" type="Texture" id=2]
+[ext_resource path="res://ChineseTakeaway.ttf" type="DynamicFontData" id=3]
+[ext_resource path="res://assets/new_dynamicfont.tres" type="DynamicFont" id=4]
 
 [sub_resource type="ShaderMaterial" id=1]
 
@@ -11,14 +14,37 @@ particles_anim_h_frames = 1
 particles_anim_v_frames = 1
 particles_anim_loop = false
 
+[sub_resource type="DynamicFont" id=3]
+resource_local_to_scene = true
+size = 27
+font_data = ExtResource( 3 )
+
 [node name="MainScreen" type="CanvasLayer"]
 script = ExtResource( 1 )
 
+[node name="TextureRect" type="TextureRect" parent="."]
+anchor_left = 0.107
+anchor_top = 0.284
+anchor_right = 0.107
+anchor_bottom = 0.284
+margin_left = -230.881
+margin_top = -169.963
+margin_right = 1669.12
+margin_bottom = 600.037
+texture = ExtResource( 2 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
 [node name="ReadyListLabel" type="Label" parent="."]
-margin_left = 636.769
-margin_top = 307.746
-margin_right = 858.769
-margin_bottom = 338.746
+margin_left = 375.611
+margin_top = 246.982
+margin_right = 919.611
+margin_bottom = 327.982
+custom_fonts/font = ExtResource( 4 )
+custom_colors/font_color = Color( 0, 0, 0, 1 )
+custom_colors/font_outline_modulate = Color( 0.952941, 0.913725, 0.913725, 1 )
+custom_colors/font_color_shadow = Color( 0, 0, 0, 1 )
 text = "Ready People Liberation Army
 "
 align = 1
@@ -32,10 +58,10 @@ anchor_left = 0.356
 anchor_top = 0.294
 anchor_right = 0.484
 anchor_bottom = 0.5
-margin_left = -147.096
-margin_top = 253.896
-margin_right = -162.168
-margin_bottom = 247.296
+margin_left = 11.8841
+margin_top = 168.038
+margin_right = -42.1879
+margin_bottom = 64.4384
 text = "Join Game"
 __meta__ = {
 "_edit_use_anchors_": false
@@ -46,10 +72,12 @@ __meta__ = {
 [node name="NameInputField" type="LineEdit" parent="."]
 anchor_right = 0.587
 anchor_bottom = 0.129
-margin_left = 470.997
-margin_top = 200.768
-margin_right = 184.909
-margin_bottom = 165.368
+margin_left = 557.438
+margin_top = 194.562
+margin_right = 102.349
+margin_bottom = 141.163
+rect_min_size = Vector2( 100, 10 )
+rect_clip_content = true
 max_length = 32
 __meta__ = {
 "_edit_use_anchors_": false
@@ -58,10 +86,10 @@ __meta__ = {
 [node name="JoinGameHTTPRequest" type="HTTPRequest" parent="."]
 
 [node name="MakeReadyButton" type="Button" parent="."]
-margin_left = 384.289
-margin_top = 432.112
-margin_right = 536.289
-margin_bottom = 528.112
+margin_left = 376.223
+margin_top = 390.293
+margin_right = 464.223
+margin_bottom = 421.293
 text = "I'm ready...."
 __meta__ = {
 "_edit_use_anchors_": false
@@ -76,10 +104,13 @@ autostart = true
 [node name="GameStateHTTPRequest" type="HTTPRequest" parent="."]
 
 [node name="Label" type="Label" parent="."]
-margin_left = 152.749
-margin_top = 51.6603
-margin_right = 807.749
-margin_bottom = 116.66
+margin_left = 258.313
+margin_top = 19.6875
+margin_right = 1001.31
+margin_bottom = 140.688
+custom_fonts/font = SubResource( 3 )
+custom_colors/font_color = Color( 0, 0, 0, 1 )
+custom_colors/font_outline_modulate = Color( 0.117647, 0.576471, 0.121569, 1 )
 text = "Welcome to Chairman Matt's.
 ** Chinese Poker **
 
@@ -90,19 +121,22 @@ __meta__ = {
 }
 
 [node name="PlayeList" type="ItemList" parent="."]
-margin_left = 651.0
-margin_top = 342.0
-margin_right = 836.0
-margin_bottom = 478.0
+margin_left = 558.646
+margin_top = 317.742
+margin_right = 743.646
+margin_bottom = 453.742
 __meta__ = {
 "_edit_use_anchors_": false
 }
 
 [node name="NameEnterLabel" type="Label" parent="."]
-margin_left = 348.851
-margin_top = 213.283
-margin_right = 458.851
-margin_bottom = 227.283
+margin_left = 428.464
+margin_top = 197.096
+margin_right = 538.464
+margin_bottom = 211.096
+custom_colors/font_color = Color( 0, 0, 0, 1 )
+custom_colors/font_outline_modulate = Color( 0, 0, 0, 1 )
+custom_colors/font_color_shadow = Color( 0, 0, 0, 1 )
 text = "Enter name here:"
 __meta__ = {
 "_edit_use_anchors_": false
