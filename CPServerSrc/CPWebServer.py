@@ -9,7 +9,7 @@ from CPGame import MoveError
 app = Flask(__name__)
 app.logger.setLevel(logging.DEBUG)
 
-gm = CPGameManager(seed=12345)
+gm = CPGameManager(seed=os.getenv('CP_RANDOM_SEED'))
 
 @app.route('/newplayer/', methods=['POST'])
 def apiNewPlayer():
