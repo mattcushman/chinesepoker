@@ -56,6 +56,7 @@ func _on_GameStateHTTPRequest_request_completed(result, response_code, headers, 
 			labelNameBBCode = "[color=red]"+name+"[/color]"
 		playerLabels[playerPos].bbcode_text=labelNameBBCode
 		for cardRank in json.result['last_move'][str(playerPositions[playerPos])]:
+			print("adding card"+str(cardRank))
 			playerHands[playerPos].add_child(Card.new(int(cardRank)%4, int(cardRank)/4))
 	if toMove==GameManager.playerId:
 		$YourMoveNotifier.show()
@@ -63,6 +64,9 @@ func _on_GameStateHTTPRequest_request_completed(result, response_code, headers, 
 	else:
 		$YourMoveNotifier.hide()
 		$Button.disabled=true
+	if int(json.result['winner'])>=0:
+		$GameOverMessage.set_text(json.result['player_names'][int(json.result['winner'])]+" won the game!")
+		$GameOverMessage.popup()
 		
 		
 func card_clicked(card):

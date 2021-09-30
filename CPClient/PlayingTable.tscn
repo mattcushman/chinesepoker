@@ -28,10 +28,8 @@ margin_right = 1002.51
 margin_bottom = 506.0
 grow_horizontal = 2
 rect_pivot_offset = Vector2( -269.735, -241.568 )
+size_flags_horizontal = 7
 columns = 13
-__meta__ = {
-"_edit_use_anchors_": false
-}
 
 [node name="Button" type="Button" parent="."]
 anchor_right = 0.023
@@ -141,6 +139,16 @@ margin_top = 553.572
 margin_right = 253.975
 margin_bottom = 590.572
 bbcode_enabled = true
+
+[node name="GameOverMessage" type="AcceptDialog" parent="."]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -75.5
+margin_top = -20.0
+margin_right = 75.5
+margin_bottom = 20.0
 
 [connection signal="timeout" from="Timer" to="." method="_on_Timer_timeout"]
 [connection signal="request_completed" from="GameStateHTTPRequest" to="." method="_on_GameStateHTTPRequest_request_completed"]

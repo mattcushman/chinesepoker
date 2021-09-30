@@ -3,6 +3,7 @@ import os
 
 from flask import Flask,request,jsonify
 from cpGameManager import CPGameManager, NoActiveGameException
+from CPGame import MoveError
 
 
 app = Flask(__name__)
