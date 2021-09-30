@@ -1,10 +1,18 @@
 extends CanvasLayer
 
 func _ready():
+	print("MainScene activated")
+	GameManager.myGameId=-1
+	$JoinGameButton.disabled=true
+	if GameManager.playerId>=0:
+		$NameInputField.set_text(GameManager.playerName)
+		$NameInputField.editable=true
+		$JoinGameButton.disabled=false
 	$NewPlayerHTTPRequest.connect("request_completed", self, "_on_request_completed")
 	$JoinGameHTTPRequest.connect("request_completed", self, "_on_request_completed")
 	$MakeReadyHTTPRequest.connect("request_completed", self, "_on_request_completed")
 	$GameStateHTTPRequest.connect("request_completed", self, "_on_request_completed")
+	$MakeReadyButton.disabled=true
 
 func _on_TextureButton_pressed():
 	print("Pressed join game")
@@ -20,13 +28,17 @@ func _on_NewPlayerHTTPRequest_request_completed(result, response_code, headers, 
 
 func _on_NameInputField_text_entered(new_text):
 	var msg = JSON.print({"name":new_text})
+	GameManager.playerName=new_text
 	print(msg)
 	print($NewPlayerHTTPRequest.request(GameManager.url+"/newplayer/", GameManager.headers, false, HTTPClient.METHOD_POST, msg))
+	$NameInputField.set_editable(false)
+	$JoinGameButton.disabled=false
 
 func _on_JoinGameHTTPRequest_request_completed(result, response_code, headers, body):
 	var json = JSON.parse(body.get_string_from_utf8())
 	print("JoinGameRequest return ", json.result)
 	GameManager.myGameId=int(json.result)
+	$MakeReadyButton.disabled=false
 
 func _on_MakeReadyButton_pressed():
 	print("Pressed make ready")

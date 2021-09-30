@@ -115,6 +115,9 @@ margin_top = 297.12
 margin_right = 194.442
 margin_bottom = 334.12
 bbcode_enabled = true
+__meta__ = {
+"_edit_use_anchors_": false
+}
 
 [node name="Label3" type="RichTextLabel" parent="."]
 margin_left = 179.946
@@ -154,3 +157,4 @@ margin_bottom = 20.0
 [connection signal="request_completed" from="GameStateHTTPRequest" to="." method="_on_GameStateHTTPRequest_request_completed"]
 [connection signal="pressed" from="Button" to="." method="_on_Button_pressed"]
 [connection signal="request_completed" from="PlayHandHTTPRequest" to="." method="_on_PlayHandHTTPRequest_request_completed"]
+[connection signal="confirmed" from="GameOverMessage" to="." method="_on_GameOverMessage_confirmed"]

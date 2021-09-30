@@ -51,23 +51,29 @@ func _on_GameStateHTTPRequest_request_completed(result, response_code, headers, 
 		for n in playerHands[playerPos].get_children():
 			playerHands[playerPos].remove_child(n)
 		name = json.result['player_names'][str(playerId)]
-		var labelNameBBCode = "[color=blue]"+name+"[/color]"
+		var cardsRemaining=str(json.result['hands'][str(playerPositions[playerPos])].size())
+		var labelNameBBCode = "[color=white]"+name+"[/color] ("+cardsRemaining+")"
 		if toMove==playerId:
-			labelNameBBCode = "[color=red]"+name+"[/color]"
+			labelNameBBCode = "[color=red]"+name+"[/color] ("+cardsRemaining+")"
 		playerLabels[playerPos].bbcode_text=labelNameBBCode
 		for cardRank in json.result['last_move'][str(playerPositions[playerPos])]:
 			print("adding card"+str(cardRank))
 			playerHands[playerPos].add_child(Card.new(int(cardRank)%4, int(cardRank)/4))
+
 	if toMove==GameManager.playerId:
 		$YourMoveNotifier.show()
 		$Button.disabled=false
 	else:
 		$YourMoveNotifier.hide()
 		$Button.disabled=true
-	if int(json.result['winner'])>=0:
-		$GameOverMessage.set_text(json.result['player_names'][int(json.result['winner'])]+" won the game!")
+	if json.result['winner']>=0:
+		var gameOverMsg="Fatality.  You have been pwned by "+json.result['player_names'][str(json.result['winner'])]
+		if json.result['winner']==GameManager.playerId:
+			gameOverMsg="You have pwned the table"
+		print("Game over: "+gameOverMsg)
+		$GameOverMessage.set_text(gameOverMsg)
 		$GameOverMessage.popup()
-		
+
 		
 func card_clicked(card):
 	card.toggle_gray()
@@ -97,3 +103,7 @@ func _on_PlayHandHTTPRequest_request_completed(result, response_code, headers, b
 	
 	
 	
+
+
+func _on_GameOverMessage_confirmed():
+	get_tree().change_scene("res://MainScreen.tscn")	
