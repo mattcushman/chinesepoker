@@ -2,16 +2,20 @@ import logging
 import os
 
 from flask import Flask,request,jsonify
+from flask_cors import CORS, cross_origin
 from cpGameManager import CPGameManager, NoActiveGameException, JoinGameError
 from CPGame import MoveError
 
+app.config['CORS_HEADERS'] = 'Content-Type'
 
 app = Flask(__name__)
 app.logger.setLevel(logging.DEBUG)
+cors = CORS(app)
 
 gm = CPGameManager(seed=os.getenv('CP_RANDOM_SEED'))
 
 @app.route('/newplayer/', methods=['POST'])
+@cross_origin()
 def apiNewPlayer():
     if not request.json or not 'name' in request.json:
         return "Could not parse newplayer", 400
@@ -20,6 +24,7 @@ def apiNewPlayer():
     return jsonify(newPlayerId), 201
 
 @app.route('/joinnextgame/', methods=['PUT'])
+@cross_origin()
 def apiJoinNextyGame():
     playerId=request.json['playerid']
     try:
@@ -32,12 +37,14 @@ def apiJoinNextyGame():
 
 
 @app.route('/makeready/', methods=['PUT'])
+@cross_origin()
 def apiMakeReady():
     playerId=request.json['playerid']
     return jsonify(gm.makeReady(playerId))
 
 
 @app.route('/implementmove/', methods=['PUT'])
+@cross_origin()
 def apiImplementMove():
     if not request.json or not 'gameid' in request.json or not 'move' in request.json:
         return "Not formatted correctly", 400
@@ -52,6 +59,7 @@ def apiImplementMove():
         return "Move Error", 400
 
 @app.route('/getgamestate/', methods=['GET'])
+@cross_origin()
 def apiGetGameState():
     if not request.json or not 'gameid' in request.json:
         return "Missing gameid", 400
@@ -60,6 +68,7 @@ def apiGetGameState():
         return jsonify(gm.getGameState(gameId)), 200
     except NoActiveGameException(gameId):
         return "Could not find gameid", 400
+
 if __name__ == '__main__':
     host=os.getenv('CP_HOST')
     port=os.getenv('CP_PORT')
