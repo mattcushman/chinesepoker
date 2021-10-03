@@ -26,9 +26,9 @@ def apiJoinNextyGame():
         joinGame=gm.joinNextGame(playerId)
     except JoinGameError as jge:
         app.logger.info(f"Join Game error {jge.msg}")
-        return
+        return jge.msg, 400
     app.logger.error(f"Join game {playerId} {joinGame}")
-    return jsonify(joinGame)
+    return jsonify(joinGame), 200
 
 
 @app.route('/makeready/', methods=['PUT'])

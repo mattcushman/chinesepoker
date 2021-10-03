@@ -1,5 +1,5 @@
-HOST=localhost:105
 HOST=172.104.211.116:5051
+HOST=localhost:105
 
 curl -i -H "Content-Type: application/json" -X POST -d '{"name":"zeus"}' http://${HOST}/newplayer/
 sleep 1
