@@ -132,7 +132,6 @@ __meta__ = {
 }
 
 [connection signal="pressed" from="JoinGameButton" to="." method="_on_TextureButton_pressed"]
-[connection signal="request_completed" from="NewPlayerHTTPRequest" to="." method="_on_HTTPRequest_request_completed"]
 [connection signal="request_completed" from="NewPlayerHTTPRequest" to="." method="_on_NewPlayerHTTPRequest_request_completed"]
 [connection signal="text_entered" from="NameInputField" to="." method="_on_NameInputField_text_entered"]
 [connection signal="request_completed" from="JoinGameHTTPRequest" to="." method="_on_JoinGameHTTPRequest_request_completed"]
