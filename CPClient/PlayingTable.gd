@@ -98,7 +98,7 @@ func _on_PlayHandHTTPRequest_request_completed(result, response_code, headers, b
 		for c in cardsToPlay:
 			$PlayerCards.remove_child(c)
 			activeCards.erase(c)
-			cardsToPlay=[]
+	cardsToPlay=[]
 
 	
 	
