@@ -58,7 +58,7 @@ def apiImplementMove():
     except:
         return "Move Error", 400
 
-@app.route('/getgamestate/', methods=['GET'])
+@app.route('/getgamestate/', methods=['POST'])
 @cross_origin()
 def apiGetGameState():
     if not request.json or not 'gameid' in request.json:

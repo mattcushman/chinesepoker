@@ -8,10 +8,10 @@ func _ready():
 		$NameInputField.set_text(GameManager.playerName)
 		$NameInputField.editable=true
 		$JoinGameButton.disabled=false
-	$NewPlayerHTTPRequest.connect("request_completed", self, "_on_request_completed")
-	$JoinGameHTTPRequest.connect("request_completed", self, "_on_request_completed")
-	$MakeReadyHTTPRequest.connect("request_completed", self, "_on_request_completed")
-	$GameStateHTTPRequest.connect("request_completed", self, "_on_request_completed")
+#	$NewPlayerHTTPRequest.connect("request_completed", self, "_on_request_completed")
+#	$JoinGameHTTPRequest.connect("request_completed", self, "_on_request_completed")
+#	$MakeReadyHTTPRequest.connect("request_completed", self, "_on_request_completed")
+#	$GameStateHTTPRequest.connect("request_completed", self, "_on_request_completed")
 	$MakeReadyButton.disabled=true
 
 func _on_TextureButton_pressed():
