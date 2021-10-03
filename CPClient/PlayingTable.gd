@@ -19,7 +19,7 @@ func _ready():
 func _on_Timer_timeout():
 	var msg = JSON.print({"gameid":GameManager.myGameId})
 	print("Calling getgamestate with ",msg)
-	print("GameState result ",$GameStateHTTPRequest.request(GameManager.url+"/getgamestate/", GameManager.headers, false, HTTPClient.METHOD_GET, msg))
+	print("GameState result ",$GameStateHTTPRequest.request(GameManager.url+"/getgamestate/", GameManager.headers, false, HTTPClient.METHOD_POST, msg))
 
 
 func _on_GameStateHTTPRequest_request_completed(result, response_code, headers, body):
