@@ -6,11 +6,11 @@ from flask_cors import CORS, cross_origin
 from cpGameManager import CPGameManager, NoActiveGameException, JoinGameError
 from CPGame import MoveError
 
-app.config['CORS_HEADERS'] = 'Content-Type'
 
 app = Flask(__name__)
 app.logger.setLevel(logging.DEBUG)
 cors = CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
 
 gm = CPGameManager(seed=os.getenv('CP_RANDOM_SEED'))
 
