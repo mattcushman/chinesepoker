@@ -41,8 +41,8 @@ class CPGameManager():
         return newPlayerId
     def getPlayerId(self, name):
         playerId=False
-        for pId in self.players:
-            if name==self.players[pId].name:
+        for pId,pName in self.players.items():
+            if name==pName:
                 playerId=pId
         return playerId
 
@@ -100,7 +100,7 @@ class CPGameManager():
     def isReady(self,pId):
         return (pId in self.ready) and self.ready[pId]
     def getActiveGameByPlayer(self,pId):
-        return [gId for gId,g in self.games if pId in g.players]
+        return [gId for gId,g in self.games.items() if pId in g.players]
     def playerStats(self):
         return {pId:[p.name,
                       int(p.id in self.pendingGame),
