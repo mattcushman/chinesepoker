@@ -39,6 +39,13 @@ class CPGameManager():
         self.players[newPlayerId]=CPPlayer(newPlayerId, name)
         self.nextPlayerId+=1
         return newPlayerId
+    def getPlayerId(self, name):
+        playerId=False
+        for pId in self.players:
+            if name==self.players[pId].name:
+                playerId=pId
+        return playerId
+
     def joinNextGame(self,playerId):
         if len(self.pendingGame)<4 and (playerId not in self.pendingGame):
             self.pendingGame.add(playerId)
@@ -89,8 +96,16 @@ class CPGameManager():
                     'hands': {player:sorted(list(game.hands[player])) for player in game.players},
                     'players': list(game.players),
                     'player_names':{k:self.players[k].name for k in game.players}
-
                     }
-
+    def isReady(self,pId):
+        return (pId in self.ready) and self.ready[pId]
+    def getActiveGameByPlayer(self,pId):
+        return [gId for gId,g in self.games if pId in g.players]
+    def playerStats(self):
+        return {pId:[p.name,
+                      int(p.id in self.pendingGame),
+                      int(self.isReady(p.id)),
+                      self.getActiveGameByPlayer(p.id)
+                      ] for (pId,p) in self.players.items()}
 
 

@@ -19,9 +19,17 @@ gm = CPGameManager(seed=os.getenv('CP_RANDOM_SEED'))
 def apiNewPlayer():
     if not request.json or not 'name' in request.json:
         return "Could not parse newplayer", 400
-    newPlayerId=gm.newPlayer(request.json['name'])
-    app.logger.info(f"Created newplayer {newPlayerId} {request.json['name']}")
-    return jsonify(newPlayerId), 201
+    playerId = gm.getPlayerId(request.json['name'])
+    if not playerId:
+        playerId=gm.newPlayer(request.json['name'])
+        app.logger.info(f"Created newplayer {playerId} {request.json['name']}")
+    return jsonify(playerId), 201
+
+@app.route('/playerstats/', methods=['POST'])
+@cross_origin()
+def apiPlayerStats():
+    playerStats=gm.playerStats()
+    return jsonify(playerStats), 201
 
 @app.route('/joinnextgame/', methods=['PUT'])
 @cross_origin()

@@ -92,6 +92,8 @@ autostart = true
 
 [node name="GameStateHTTPRequest" type="HTTPRequest" parent="."]
 
+[node name="PlayerListHTTPRequest" type="HTTPRequest" parent="."]
+
 [node name="Label" type="Label" parent="."]
 margin_left = 258.313
 margin_top = 19.6875
@@ -109,7 +111,7 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 
-[node name="PlayeList" type="ItemList" parent="."]
+[node name="PlayerList" type="ItemList" parent="."]
 margin_left = 558.646
 margin_top = 317.742
 margin_right = 743.646
@@ -139,3 +141,4 @@ __meta__ = {
 [connection signal="request_completed" from="MakeReadyHTTPRequest" to="." method="_on_MakeReadyHTTPRequest_request_completed"]
 [connection signal="timeout" from="TickTimer" to="." method="_on_TickTimer_timeout"]
 [connection signal="request_completed" from="GameStateHTTPRequest" to="." method="_on_GameStateHTTPRequest_request_completed"]
+[connection signal="request_completed" from="PlayerListHTTPRequest" to="." method="_on_PlayerListHTTPRequest_request_completed"]
