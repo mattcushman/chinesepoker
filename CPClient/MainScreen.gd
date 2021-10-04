@@ -71,11 +71,11 @@ func _on_PlayerListHTTPRequest_request_completed(result, response_code, headers,
 		var isReady = p[2]
 		var activeGames = p[3]
 		if isReady==1:
-			name = ' * '+name
+			name = ' *  '+name
 		elif inPending==1:
-			name = ' + '+name
+			name = ' +  '+name
 		else:
-			name = '   '+name
+			name = '    '+name
 		name = name + " " + str(activeGames)
 		$PlayerList.add_item(name)
 			
