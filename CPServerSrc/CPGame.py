@@ -78,7 +78,7 @@ class CPGame():
     def doMove(self, move):
         for c in move:
             self.hands[self.toMove].remove(c)
-        self.playerMoves.append([self.players[self.toMove], move])
+        self.playerMoves.append([self.toMove, move])
         if len(self.hands[self.toMove])==0:
             self.winner = self.players[self.toMove]
         self.toMove = self.players[(self.players.index(self.toMove)+1) % len(self.players)]
@@ -88,7 +88,7 @@ class CPGame():
         if lm==[]:
             return []
         else:
-            return lm
+            return lm[-1]
     def done(self):
         print(self.hands)
         return any([len(hand)==0 for hand in self.hands.values()])
