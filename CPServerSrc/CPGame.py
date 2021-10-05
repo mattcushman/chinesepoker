@@ -29,10 +29,10 @@ def computeMoveSignature(hand):
         sig.append(1+hand[-1])
     else:
         sig.append(0)
-    if len(hand) == 5 and ( (hand[0]//4+1== hand[1]//4) and
-                            (hand[1]//4+1== hand[2]//4) and
-                            (hand[2]//4+1== hand[3]//4) and
-                            (hand[3]//4+1== hand[4]//4)):
+    if len(hand) == 5 and ( (hand[0]//4+1 == hand[1]//4) and
+                            (hand[1]//4+1 == hand[2]//4) and
+                            (hand[2]//4+1 == hand[3]//4) and
+                            (hand[3]//4+1 == hand[4]//4)):
         sig.append(1+hand[-1])
     else:
         sig.append(0)
@@ -69,7 +69,7 @@ class CPGame():
             return True
         moveSignature = computeMoveSignature(move)
         if not sum(moveSignature)>0:
-            raise MoveError("Not valid move", move)
+            raise MoveError("Not valid move ", move, moveSignature)
         if lastRealPlayer==self.toMove or all([x>=y for (x,y) in zip(moveSignature, computeMoveSignature(lastRealMove))]):
             self.doMove(move)
             return True
@@ -81,14 +81,14 @@ class CPGame():
         self.playerMoves.append([self.players[self.toMove], move])
         if len(self.hands[self.toMove])==0:
             self.winner = self.players[self.toMove]
-        self.toMove = self.players[self.players.index(self.toMove)+1 % len(self.players)]
+        self.toMove = self.players[(self.players.index(self.toMove)+1) % len(self.players)]
 
     def getLastMove(self, playerId):
-        l=[m for (p,m) in self.playerMoves if p==playerId]
-        if l==[]:
+        lm=[m for (p,m) in self.playerMoves if p==playerId]
+        if lm==[]:
             return []
         else:
-            return l[-1]
+            return lm
     def done(self):
         print(self.hands)
         return any([len(hand)==0 for hand in self.hands.values()])
