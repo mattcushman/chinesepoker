@@ -29,8 +29,8 @@ def computeMoveSignature(hand):
         sig.append(1+hand[-1])
     else:
         sig.append(0)
-    if len(hand) == 5 and ( hand[0] // 4 +1== hand[1] // 4 and hand[1] // 4 +1== hand[2] // 4
-                            and hand[2]+1 // 4 == hand[3] // 4 and hand[3]+1 // 4 == hand[4] // 4):
+    if len(hand) == 5 and ( hand[0]//4+1== hand[1]//4 and hand[1]//4+1== hand[2]//4
+                            and hand[2]//4+1 == hand[3]//4 and hand[3]//4+1== hand[4]//4):
         sig.append(1+hand[-1])
     else:
         sig.append(0)
