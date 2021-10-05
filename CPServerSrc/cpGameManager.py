@@ -1,6 +1,6 @@
 from CPGame import CPGame
 
-class NoActiveGameException(Exception):
+class NoActiveGame(Exception):
     def __init__(self, gameId):
         self.gameId=gameId
 class InvalidMove(Exception):
@@ -85,7 +85,7 @@ class CPGameManager():
                     'player_names':{k:self.players[k].name for k in self.players.keys()}
                     }
         elif gameId not in self.games:
-            raise NoActiveGameException(gameId)
+            raise NoActiveGame(gameId)
         else:
             game=self.games[gameId]
             return {'active':True,

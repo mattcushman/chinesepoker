@@ -3,7 +3,7 @@ import os
 
 from flask import Flask,request,jsonify
 from flask_cors import CORS, cross_origin
-from cpGameManager import CPGameManager, NoActiveGameException, JoinGameError
+from cpGameManager import CPGameManager, NoActiveGame, JoinGameError, InvalidMove
 from CPGame import MoveError
 
 
@@ -63,8 +63,14 @@ def apiImplementMove():
     except MoveError as merr:
         app.logger.error(f"MoveError {merr.move} {merr.msg}")
         return f"MoveError {merr.move} {merr.msg}", 406
+    except InvalidMove as merr:
+        app.logger.error(f"InvalidMove {merr.move} {merr.gameId}")
+        return f"MoveError {merr.move} {merr.gameId}", 406
+    except NoActiveGameException as nag:
+        app.logger.error(f"NoActiveGameException(gameId={nag.gameId})")
+        return f"NoActiveGameException(gameId={gameId})", 400
     except:
-        return "Move Error", 400
+        return "Other Error", 400
 
 @app.route('/getgamestate/', methods=['POST'])
 @cross_origin()
@@ -74,8 +80,8 @@ def apiGetGameState():
     try:
         gameId=int(request.json['gameid'])
         return jsonify(gm.getGameState(gameId)), 200
-    except NoActiveGameException(gameId):
-        return "Could not find gameid", 400
+    except NoActiveGameException as nag:
+        return f"NoActiveGameException(gameId={nag.gameId})", 400
 
 if __name__ == '__main__':
     host=os.getenv('CP_HOST')
