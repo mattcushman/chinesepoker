@@ -80,7 +80,7 @@ class CPGame():
             self.hands[self.toMove].remove(c)
         self.playerMoves.append([self.toMove, move])
         if len(self.hands[self.toMove])==0:
-            self.winner = self.players[self.toMove]
+            self.winner = self.toMove
         self.toMove = self.players[(self.players.index(self.toMove)+1) % len(self.players)]
 
     def getLastMove(self, playerId):
