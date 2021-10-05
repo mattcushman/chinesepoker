@@ -65,7 +65,7 @@ def apiImplementMove():
         return f"MoveError {merr.move} {merr.msg}", 406
     except InvalidMove as merr:
         app.logger.error(f"InvalidMove {merr.move} {merr.gameId}")
-        return f"MoveError {merr.move} {merr.gameId}", 406
+        return f"Invalid Move {merr.move} {merr.gameId}", 406
     except NoActiveGameException as nag:
         app.logger.error(f"NoActiveGameException(gameId={nag.gameId})")
         return f"NoActiveGameException(gameId={gameId})", 400
