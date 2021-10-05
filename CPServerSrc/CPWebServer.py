@@ -40,7 +40,7 @@ def apiJoinNextyGame():
     except JoinGameError as jge:
         app.logger.info(f"Join Game error {jge.msg}")
         return jge.msg, 400
-    app.logger.error(f"Join game {playerId} {joinGame}")
+    app.logger.info(f"Join game {playerId} {joinGame}")
     return jsonify(joinGame), 200
 
 
@@ -66,8 +66,8 @@ def apiImplementMove():
     except InvalidMove as merr:
         app.logger.error(f"InvalidMove {merr.move} {merr.gameId}")
         return f"Invalid Move {merr.move} {merr.gameId}", 406
-    except NoActiveGameException as nag:
-        app.logger.error(f"NoActiveGameException(gameId={nag.gameId})")
+    except NoActiveGame as nag:
+        app.logger.error(f"NoActiveGame(gameId={nag.gameId})")
         return f"NoActiveGameException(gameId={gameId})", 400
     except:
         return "Other Error", 400
