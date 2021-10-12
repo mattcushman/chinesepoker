@@ -2,7 +2,7 @@
 
 [ext_resource path="res://Card.gd" type="Script" id=1]
 [ext_resource path="res://PlayingTable.gd" type="Script" id=2]
-[ext_resource path="res://3f719fce5e.jpeg" type="Texture" id=3]
+[ext_resource path="res://assets/3f719fce5e.jpeg" type="Texture" id=3]
 [ext_resource path="res://assets/new_dynamicfont.tres" type="DynamicFont" id=4]
 
 [node name="PlayingTable" type="CanvasLayer"]

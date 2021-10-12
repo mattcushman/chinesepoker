@@ -42,7 +42,7 @@ class CPGameManager():
     def getPlayerId(self, name):
         playerId=False
         for pId,pName in self.players.items():
-            if name==pName:
+            if name==pName[0]:
                 playerId=pId
         return playerId
 
