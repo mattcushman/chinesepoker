@@ -1,4 +1,8 @@
+import itertools
 import numpy as np
+
+ranks = ['4','5','6','7','8','9','T','J','Q','K','A','2','3']
+suits = ['d','c','h','s']
 
 class MoveError(Exception):
     def __init__(self, msg, move):
@@ -43,6 +47,15 @@ def computeMoveSignature(hand):
         sig.append(0)
     return sig
 
+def subsets(k, l):
+    return [list(x) for x in itertools.combinations(l,k)]
+
+def cardToString(c):
+    return ranks[c//4]+suits[c%4]
+
+def cardsToString(cards):
+    return "-".join([cardToString(c) for c in sorted(cards)])
+
 class CPGame():
     def __init__(self, players,seed=False):
         if seed:
@@ -55,6 +68,7 @@ class CPGame():
         self.toMove = players[np.argmin([min(self.hands[playerId]) for playerId in players])]
         self.playerMoves=[]
         self.winner=-1
+
     def implementMove(self, move):
         if not all(c in self.hands[self.toMove] for c in move):
             raise MoveError("Not all cards are in hand", move)
@@ -89,6 +103,42 @@ class CPGame():
             return []
         else:
             return lm[-1]
+
+    def allMoves(self, cards):
+        moves = [[c] for c in cards]
+        for rnk in range(13):
+            cardsOfRank = [c for c in cards if c//4==rnk]
+            moves = moves + subsets(2, cardsOfRank)
+            moves = moves + subsets(3, cardsOfRank)
+            moves = moves + subsets(4, cardsOfRank)
+            if (rnk+4<13) and (len(cardsOfRank)>0):
+                straights= [ [c] for c in cardsOfRank]
+                for k in range(1,5):
+                    straights = [ s + [c] for s in straights for c in cards if c//13==rnk+k]
+                moves = moves + straights
+        for suit in range(4):
+            cardsOfSuit = [c for c in cards if c%4==suit]
+            moves = moves + subsets(5, cardsOfSuit)
+        return moves
+
+    def getMoves(self):
+        allMoves = self.allMoves(self.hands[self.toMove])
+        if len(self.playerMoves)==0:
+            c=min(self.hands[self.toMove])
+            return [m for m in allMoves if c in m]
+        (lastRealPlayer, lastRealMove) = [pm for pm in self.playerMoves if len(pm[1]) > 0][-1]
+        if self.toMove==lastRealPlayer:
+            return allMoves
+        else:
+            lastMoveSignature = computeMoveSignature(lastRealMove)
+            return [ [] ] + [m for m in allMoves if all([x>=y for (x,y) in zip(computeMoveSignature(m), lastMoveSignature)])]
+
     def done(self):
-        print(self.hands)
         return any([len(hand)==0 for hand in self.hands.values()])
+
+    def prettyState(self):
+        str = " | ".join(f"p={p} hand={cardsToString(self.hands[p])}" for p in self.players)
+        if self.playerMoves == []:
+            return str
+        else:
+            return f"player={self.playerMoves[-1][0]} move={cardsToString(self.playerMoves[-1][1])} / "+str
