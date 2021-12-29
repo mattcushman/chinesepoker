@@ -50,12 +50,6 @@ def computeMoveSignature(hand):
 def subsets(k, l):
     return [list(x) for x in itertools.combinations(l,k)]
 
-def cardToString(c):
-    return ranks[c//4]+suits[c%4]
-
-def cardsToString(cards):
-    return "-".join([cardToString(c) for c in sorted(cards)])
-
 class CPGame():
     def __init__(self, players,seed=False):
         if seed:
@@ -68,6 +62,12 @@ class CPGame():
         self.toMove = players[np.argmin([min(self.hands[playerId]) for playerId in players])]
         self.playerMoves=[]
         self.winner=-1
+
+    def cardToString(self, c):
+        return ranks[c // 4] + suits[c % 4]
+
+    def cardsToString(self, cards):
+        return "-".join([self.cardToString(c) for c in sorted(cards)])
 
     def implementMove(self, move):
         if not all(c in self.hands[self.toMove] for c in move):
@@ -114,7 +114,7 @@ class CPGame():
             if (rnk+4<13) and (len(cardsOfRank)>0):
                 straights= [ [c] for c in cardsOfRank]
                 for k in range(1,5):
-                    straights = [ s + [c] for s in straights for c in cards if c//13==rnk+k]
+                    straights = [ s + [c] for s in straights for c in cards if c//4==rnk+k]
                 moves = moves + straights
         for suit in range(4):
             cardsOfSuit = [c for c in cards if c%4==suit]
@@ -137,8 +137,8 @@ class CPGame():
         return any([len(hand)==0 for hand in self.hands.values()])
 
     def prettyState(self):
-        str = " | ".join(f"p={p} hand={cardsToString(self.hands[p])}" for p in self.players)
+        str = " | ".join(f"p={p} hand={self.cardsToString(self.hands[p])}" for p in self.players)
         if self.playerMoves == []:
             return str
         else:
-            return f"player={self.playerMoves[-1][0]} move={cardsToString(self.playerMoves[-1][1])} / "+str
+            return f"player={self.playerMoves[-1][0]} move={self.cardsToString(self.playerMoves[-1][1])} / "+str
