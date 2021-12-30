@@ -198,7 +198,6 @@ while True:  # Run until solved
 
         # Update every fourth frame and once batch size is over 32
         if frame_count % update_after_actions == 0 and len(done_history) > batch_size:
-            print("Updating model")
             # Get indices of samples for replay buffers
             indices = np.random.choice(range(len(done_history)-num_players), size=batch_size)
 
