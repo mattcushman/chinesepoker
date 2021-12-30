@@ -176,8 +176,8 @@ while True:  # Run until solved
             action = np.argmax(action_probs)
             if do_print:
                 print(f"Best action {action}")
-               for (hand,prob) in zip(env.game.getMoves(), action_probs.tolist()):
-                    print(f"{env.game.cardsToString(hand):15} {prob[0]:8.6f}")
+                for (hand,prob) in zip(env.game.getMoves(), action_probs.tolist()):
+                     print(f"{env.game.cardsToString(hand):15} {prob[0]:8.6f}")
 
         # Decay probability of taking random action
         epsilon -= epsilon_interval / epsilon_greedy_frames
