@@ -155,7 +155,7 @@ while True:  # Run until solved
     episode_reward = 0
 
     for timestep in range(1, max_steps_per_episode):
-        do_print = (timestep % 10000)<100
+        do_print = (frame_count % 10000)<100
         if do_print:
             print(f'frame count={frame_count}')
             print(env.prettyState())
