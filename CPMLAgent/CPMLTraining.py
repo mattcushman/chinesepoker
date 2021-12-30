@@ -69,7 +69,7 @@ import CPMLGameEnv
 seed = 42
 gamma = 0.95  # Discount factor for past rewards
 epsilon = 1.0  # Epsilon greedy parameter
-epsilon_min = 0.1  # Minimum epsilon greedy parameter
+epsilon_min = 0.05  # Minimum epsilon greedy parameter
 epsilon_max = 1.0  # Maximum epsilon greedy parameter
 epsilon_interval = (
     epsilon_max - epsilon_min
@@ -98,8 +98,8 @@ def create_q_model():
     # Network defined by the Deepmind paper
     inputs = layers.Input(shape=(hist_len+2, num_cards ))
 
-    layer1 = layers.Dense(32, activation="relu")(inputs)
-    layer2 = layers.Dense(128, activation="relu")(layer1)
+    layer1 = layers.Dense(64, activation="relu")(inputs)
+    layer2 = layers.Dense(64, activation="relu")(layer1)
     layer3 = layers.Dense(128, activation="relu")(layer2)
     layer4 = layers.Flatten()(layer3)
     action = layers.Dense(1, activation="linear")(layer4)
@@ -133,16 +133,16 @@ running_reward = 0
 episode_count = 0
 frame_count = 0
 # Number of frames to take random action and observe output
-epsilon_random_frames = 100
+epsilon_random_frames = 1000
 # Number of frames for exploration
-epsilon_greedy_frames = 100000.0
+epsilon_greedy_frames = 1000000.0
 # Maximum replay length
 # Note: The Deepmind paper suggests 1000000 however this causes memory issues
 max_memory_length = 100000
 # Train the model after 4 actions
-update_after_actions = 4
+update_after_actions = 50
 # How often to update the target network
-update_target_network = 10000
+update_target_network = 50000
 # Using huber loss for stability
 loss_function = keras.losses.Huber()
 
@@ -155,8 +155,10 @@ while True:  # Run until solved
     episode_reward = 0
 
     for timestep in range(1, max_steps_per_episode):
-        print(f'frame count={frame_count}')
-        print(env.prettyState())
+        do_print = (timestep % 10000)<100
+        if do_print:
+            print(f'frame count={frame_count}')
+            print(env.prettyState())
         frame_count += 1
 
         # Use epsilon-greedy for exploration
@@ -164,16 +166,18 @@ while True:  # Run until solved
         if frame_count < epsilon_random_frames or epsilon > np.random.rand(1)[0]:
             # Take random action
             action = np.random.choice(len(possibleActions))
-            print(f"Random action {epsilon}")
+            if do_print:
+                print(f"Random action {epsilon}")
         else:
             # Predict action Q-values
             # From environment state
             action_probs = model.predict(np.stack([np.vstack([a,state]) for a in possibleActions]).astype('float32'))
             # Take best action
             action = np.argmax(action_probs)
-            print(f"Best action {action}")
-            for (hand,prob) in zip(env.game.getMoves(), action_probs.tolist()):
-                print(f"{env.game.cardsToString(hand):15} {prob[0]:8.6f}")
+            if do_print:
+                print(f"Best action {action}")
+               for (hand,prob) in zip(env.game.getMoves(), action_probs.tolist()):
+                    print(f"{env.game.cardsToString(hand):15} {prob[0]:8.6f}")
 
         # Decay probability of taking random action
         epsilon -= epsilon_interval / epsilon_greedy_frames
@@ -251,7 +255,7 @@ while True:  # Run until solved
             del state_history[:1]
             del action_history[:1]
             del done_history[:1]
-           # model.save('cpmlModel')
+            model.save('cpmlModel')
 
         if done:
             break
