@@ -136,7 +136,8 @@ class CPGame():
             return allMoves
         else:
             lastMoveSignature = computeMoveSignature(lastRealMove)
-            print(f"HERE!!!  {computeMoveSignature(m)} {lastMoveSignature}")
+            for m in allMoves:
+                print(f"HERE!!! {m} {computeMoveSignature(m)} {lastMoveSignature}")
             return [ [] ] + [m for m in allMoves if all([x>=y for (x,y) in zip(computeMoveSignature(m), lastMoveSignature)])]
 
     def done(self):
