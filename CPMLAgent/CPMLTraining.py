@@ -255,6 +255,8 @@ while True:  # Run until solved
             del state_history[:1]
             del action_history[:1]
             del done_history[:1]
+            model.compile(optimizer='adam', loss=loss_function)
+
             model.save('cpmlModel')
 
         if done:
