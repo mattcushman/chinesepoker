@@ -116,6 +116,10 @@ class CPGame():
                 for k in range(1,5):
                     straights = [ s + [c] for s in straights for c in cards if c//4==rnk+k]
                 moves = moves + straights
+        for pair in moves:
+            for trip in moves:
+                if len(pair)==2 and len(trip)==3 and pair[0]//4 != trip[0]//3:
+                    moves.append(pair+trip)
         for suit in range(4):
             cardsOfSuit = [c for c in cards if c%4==suit]
             moves = moves + subsets(5, cardsOfSuit)
