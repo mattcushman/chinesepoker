@@ -88,7 +88,6 @@ class CPGame():
             self.doMove(move)
             return True
         else:
-            print(moveSignature, computeMoveSignature(lastRealMove))
             raise MoveError("Move does not beat last move", move)
     def doMove(self, move):
         for c in move:
@@ -119,7 +118,7 @@ class CPGame():
                 moves = moves + straights
         for pair in moves:
             for trip in moves:
-                if len(pair)==2 and len(trip)==3 and pair[0]//4 != trip[0]//3:
+                if len(pair)==2 and len(trip)==3 and pair[0]//4 != trip[0]//4:
                     moves.append(pair+trip)
         for suit in range(4):
             cardsOfSuit = [c for c in cards if c%4==suit]
@@ -136,11 +135,9 @@ class CPGame():
             return allMoves
         else:
             lastMoveSignature = computeMoveSignature(lastRealMove)
-            print(f"here {lastMoveSignature}")
             moves = [ [] ]
             for m in allMoves:
                 if all([x>=y for (x,y) in zip(computeMoveSignature(m), lastMoveSignature)]):
-                    print(f"Adding {m} with signature {computeMoveSignature(m)}")
                     moves.append(m)
             return moves
 
