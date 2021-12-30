@@ -88,6 +88,7 @@ class CPGame():
             self.doMove(move)
             return True
         else:
+            print(moveSignature, computeMoveSignature(lastRealMove, lastRealMove))
             raise MoveError("Move does not beat last move", move)
     def doMove(self, move):
         for c in move:
