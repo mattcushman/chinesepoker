@@ -98,8 +98,8 @@ def create_q_model():
     # Network defined by the Deepmind paper
     inputs = layers.Input(shape=(hist_len+2, num_cards ))
 
-    layer1 = layers.Dense(64, activation="relu")(inputs)
-    layer2 = layers.Dense(64, activation="relu")(layer1)
+    layer1 = layers.Conv2D(2,4,  padding="same", activation="relu")(inputs)
+    layer2 = layers.Dense(32, activation="relu")(layer1)
     layer3 = layers.Dense(128, activation="relu")(layer2)
     layer4 = layers.Flatten()(layer3)
     action = layers.Dense(1, activation="linear")(layer4)
@@ -140,9 +140,9 @@ epsilon_greedy_frames = 1000000.0
 # Note: The Deepmind paper suggests 1000000 however this causes memory issues
 max_memory_length = 100000
 # Train the model after 4 actions
-update_after_actions = 50
+update_after_actions = 4
 # How often to update the target network
-update_target_network = 50000
+update_target_network = 10000
 # Using huber loss for stability
 loss_function = keras.losses.Huber()
 
@@ -155,7 +155,8 @@ while True:  # Run until solved
     episode_reward = 0
 
     for timestep in range(1, max_steps_per_episode):
-        print(f'frame count={frame_count}')
+        if frame_count%10==0:
+            print(f'frame count={frame_count}')
 
         do_print = (frame_count % 10000)<100
         if do_print:
