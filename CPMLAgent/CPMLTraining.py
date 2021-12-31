@@ -96,7 +96,7 @@ is chosen by selecting the larger of the four Q-values predicted in the output l
 
 def create_q_model():
     # Network defined by the Deepmind paper
-    inputs = layers.Input(shape=(hist_len+2, num_cards ))
+    inputs = layers.Input(shape=(hist_len+2, num_cards,1 ))
 
     layer1 = layers.Conv2D(2,4,  padding="same", activation="relu")(inputs)
     layer2 = layers.Dense(32, activation="relu")(layer1)
@@ -204,7 +204,7 @@ while True:  # Run until solved
             indices = np.random.choice(range(len(done_history)-num_players), size=batch_size)
 
             # Using list comprehension to sample from replay buffer
-            state_sample = np.array([state_history[i] for i in indices]).astype("float32")
+            # state_sample = np.array([state_history[i] for i in indices]).astype("float32")
             state_next_sample = np.array([state_history[i+num_players] for i in indices]).astype("float32")
             state_action_sample = np.array([np.vstack([np.array(action_history[i]),state_history[i]]) for i in indices]).astype("float32")
             state_action_next_sample = np.array([np.vstack([np.array(action_history[i+num_players]),state_history[i+num_players]]) for i in indices])
@@ -217,7 +217,7 @@ while True:  # Run until solved
 
             # Build the updated Q-values for the sampled future states
             # Use the target model for stability
-            future_rewards = model_target.predict(state_action_next_sample)
+            future_rewards = model_target.predict(np.expand_dims(state_action_next_sample,axis=3))
             # Q value = reward + discount factor * expected future reward
             updated_q_values = rewards_sample + gamma * tf.reduce_max(
                 future_rewards, axis=1
@@ -231,7 +231,7 @@ while True:  # Run until solved
 
             with tf.GradientTape() as tape:
                 # Train the model on the states and updated Q-values
-                q_values = model(state_action_sample)
+                q_values = model(np.expand_dims(state_action_sample,axis=3))
 
                 # Apply the masks to the Q-values to get the Q-value for action taken
      #           q_action = tf.reduce_sum(tf.multiply(q_values, masks), axis=1)
