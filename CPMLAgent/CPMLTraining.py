@@ -155,9 +155,10 @@ while True:  # Run until solved
     episode_reward = 0
 
     for timestep in range(1, max_steps_per_episode):
+        print(f'frame count={frame_count}')
+
         do_print = (frame_count % 10000)<100
         if do_print:
-            print(f'frame count={frame_count}')
             print(env.prettyState())
         frame_count += 1
 
@@ -255,8 +256,7 @@ while True:  # Run until solved
             del action_history[:1]
             del done_history[:1]
 #            model.compile(optimizer='adam', loss=loss_function)
-
-            model.save('cpmlModel')
+#            model.save('cpmlModel')
 
         if done:
             break
