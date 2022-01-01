@@ -159,7 +159,7 @@ while True:  # Run until solved
         if frame_count%10==0:
             print(f'frame count={frame_count}')
 
-        do_print = (frame_count % 10000)<100
+        do_print = (frame_count % 1000)<20
         if do_print:
             print(env.prettyState())
         frame_count += 1
