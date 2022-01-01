@@ -67,7 +67,7 @@ import CPMLGameEnv
 
 # Configuration paramaters for the whole setup
 seed = 42
-gamma = 0.95  # Discount factor for past rewards
+gamma = 0.98  # Discount factor for past rewards
 epsilon = 1.0  # Epsilon greedy parameter
 epsilon_min = 0.05  # Minimum epsilon greedy parameter
 epsilon_max = 1.0  # Maximum epsilon greedy parameter
@@ -98,11 +98,12 @@ def create_q_model():
     # Network defined by the Deepmind paper
     inputs = layers.Input(shape=(hist_len+2, num_cards,1 ))
 
-    layer1 = layers.Conv2D(2,4,  padding="same", activation="relu")(inputs)
+    layer1 = layers.Conv2D(16,4, activation="relu")(inputs)
     layer2 = layers.Dense(32, activation="relu")(layer1)
-    layer3 = layers.Dense(128, activation="relu")(layer2)
-    layer4 = layers.Flatten()(layer3)
-    action = layers.Dense(1, activation="linear")(layer4)
+    layer3 = layers.Dense(32, activation="relu")(layer2)
+    layer4 = layers.Dense(128, activation="relu")(layer3)
+    layer5 = layers.Flatten()(layer4)
+    action = layers.Dense(1, activation="linear")(layer5)
     return keras.Model(inputs=inputs, outputs=action)
 
 
@@ -135,7 +136,7 @@ frame_count = 0
 # Number of frames to take random action and observe output
 epsilon_random_frames = 1000
 # Number of frames for exploration
-epsilon_greedy_frames = 1000000.0
+epsilon_greedy_frames = 100000.0
 # Maximum replay length
 # Note: The Deepmind paper suggests 1000000 however this causes memory issues
 max_memory_length = 100000
