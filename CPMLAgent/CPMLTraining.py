@@ -78,11 +78,12 @@ batch_size = 32  # Size of batch taken from replay buffer
 max_steps_per_episode = 10000
 
 num_cards = 52
-hist_len = 15
+hist_len = 30
 num_players = 2
 
 # Use the Baseline Atari environment because of Deepmind helper functions
 env = CPMLGameEnv.CPMLGameEnv(num_players, hist_len)
+loss_function = keras.losses.Huber()
 
 """
 ## Implement the Deep Q-Network
@@ -98,13 +99,15 @@ def create_q_model():
     # Network defined by the Deepmind paper
     inputs = layers.Input(shape=(hist_len+2, num_cards,1 ))
 
-    layer1 = layers.Conv2D(16,4, activation="relu")(inputs)
+    layer1 = layers.Conv2D(8,4, activation="relu")(inputs)
     layer2 = layers.Dense(32, activation="relu")(layer1)
     layer3 = layers.Dense(32, activation="relu")(layer2)
     layer4 = layers.Dense(128, activation="relu")(layer3)
     layer5 = layers.Flatten()(layer4)
     action = layers.Dense(1, activation="linear")(layer5)
-    return keras.Model(inputs=inputs, outputs=action)
+    model = keras.Model(inputs=inputs, outputs=action)
+    model.compile(optimizer='adam', loss=loss_function)
+    return model
 
 
 # The first model makes the predictions for Q-values which are used to
@@ -128,7 +131,6 @@ action_history = []
 state_history = []
 rewards_history = []
 done_history = []
-episode_reward_history = []
 state_action_history = []
 running_reward = 0
 episode_count = 0
@@ -145,7 +147,6 @@ update_after_actions = 4
 # How often to update the target network
 update_target_network = 10000
 # Using huber loss for stability
-loss_function = keras.losses.Huber()
 
 def combine_state_action(state, action):
     return np.array([[action]+state]).astype("float32")
@@ -153,7 +154,6 @@ def combine_state_action(state, action):
 
 while True:  # Run until solved
     state = np.array(env.reset())
-    episode_reward = 0
 
     for timestep in range(1, max_steps_per_episode):
         if frame_count%10==0:
@@ -174,13 +174,14 @@ while True:  # Run until solved
         else:
             # Predict action Q-values
             # From environment state
-            action_probs = model.predict(np.stack([np.vstack([a,state]) for a in possibleActions]).astype('float32'))
+            action_probs = model.predict(np.expand_dims(np.stack([np.vstack([a,state]) for a in possibleActions]).astype('float32'),
+                                                        axis=3))
             # Take best action
             action = np.argmax(action_probs)
             if do_print:
                 print(f"Best action {action}")
-                for (hand,prob) in zip(env.game.getMoves(), action_probs.tolist()):
-                     print(f"{env.game.cardsToString(hand):15} {prob[0]:8.6f}")
+                for i,(hand,prob) in enumerate(zip(env.game.getMoves(), action_probs.tolist())):
+                     print(f"({i}) {env.game.cardsToString(hand):>15} {prob[0]:8.6f}")
 
         # Decay probability of taking random action
         epsilon -= epsilon_interval / epsilon_greedy_frames
@@ -189,8 +190,6 @@ while True:  # Run until solved
         # Apply the sampled action in our environment
         state_next, reward, done, _ = env.step(action)
         state_next = np.array(state_next)
-
-        episode_reward += reward
 
         # Save actions and states in replay buffer
         action_history.append(possibleActions[action])
@@ -209,23 +208,16 @@ while True:  # Run until solved
             state_next_sample = np.array([state_history[i+num_players] for i in indices]).astype("float32")
             state_action_sample = np.array([np.vstack([np.array(action_history[i]),state_history[i]]) for i in indices]).astype("float32")
             state_action_next_sample = np.array([np.vstack([np.array(action_history[i+num_players]),state_history[i+num_players]]) for i in indices])
-            rewards_sample = [rewards_history[i] for i in indices]
+            rewards_sample = np.array([rewards_history[i] for i in indices]).astype("float32")
             action_sample = [action_history[i] for i in indices]
             action_next_sample = [action_history[i+num_players] for i in indices]
-            done_sample = tf.convert_to_tensor(
-                [float(done_history[i]) for i in indices]
-            )
+            done_sample = np.array([any([done_history[i+j] for j in range(min(num_players, len(done_history)-i))]) for i in indices]).astype("float32")
 
             # Build the updated Q-values for the sampled future states
             # Use the target model for stability
             future_rewards = model_target.predict(np.expand_dims(state_action_next_sample,axis=3))
             # Q value = reward + discount factor * expected future reward
-            updated_q_values = rewards_sample + gamma * tf.reduce_max(
-                future_rewards, axis=1
-            )
-
-            # If final frame set the last value to -1
-            # updated_q_values = updated_q_values * (1 - done_sample) - done_sample
+            updated_q_values = rewards_sample + gamma * future_rewards * (1-done_sample)
 
             # Create a mask so we only calculate loss on the updated Q-values
           #  masks = tf.one_hot(action_sample, num_actions)
@@ -250,6 +242,8 @@ while True:  # Run until solved
             # Log details
             template = "running reward: {:.2f} at episode {}, frame count {}"
             print(template.format(running_reward, episode_count, frame_count))
+            print("Saving model")
+            model.save('cpmlModel')
 
         # Limit the state and reward history
         if len(rewards_history) > max_memory_length:
@@ -257,8 +251,6 @@ while True:  # Run until solved
             del state_history[:1]
             del action_history[:1]
             del done_history[:1]
-#            model.compile(optimizer='adam', loss=loss_function)
-#            model.save('cpmlModel')
 
         if done:
             break
