@@ -99,9 +99,9 @@ def create_q_model():
     # Network defined by the Deepmind paper
     inputs = layers.Input(shape=(hist_len+2, num_cards,1 ))
 
-    layer1 = layers.Conv2D(8,4, activation="relu")(inputs)
-    layer2 = layers.Dense(32, activation="relu")(layer1)
-    layer3 = layers.Dense(32, activation="relu")(layer2)
+    layer1 = layers.Dense(32, activation="relu")(inputs)
+    layer2 = layers.Dense(64, activation="relu")(layer1)
+    layer3 = layers.Dense(64, activation="relu")(layer2)
     layer4 = layers.Dense(128, activation="relu")(layer3)
     layer5 = layers.Flatten()(layer4)
     action = layers.Dense(1, activation="linear")(layer5)
@@ -129,9 +129,9 @@ optimizer = keras.optimizers.Adam(learning_rate=0.00025, clipnorm=1.0)
 # Experience replay buffers
 action_history = []
 state_history = []
-rewards_history = []
 done_history = []
-state_action_history = []
+possible_actions = []
+rewards_history = []
 running_reward = 0
 episode_count = 0
 frame_count = 0
@@ -146,10 +146,13 @@ max_memory_length = 100000
 update_after_actions = 4
 # How often to update the target network
 update_target_network = 10000
-# Using huber loss for stability
+
 
 def combine_state_action(state, action):
     return np.array([[action]+state]).astype("float32")
+
+def get_action_probs(model,possibleActions,state):
+    return model.predict(np.expand_dims(np.stack([np.vstack([a, state]) for a in possibleActions]).astype('float32'),axis=3))
 
 
 while True:  # Run until solved
@@ -166,6 +169,7 @@ while True:  # Run until solved
 
         # Use epsilon-greedy for exploration
         possibleActions = env.getPossibleActions()
+
         if frame_count < epsilon_random_frames or epsilon > np.random.rand(1)[0]:
             # Take random action
             action = np.random.choice(len(possibleActions))
@@ -174,8 +178,7 @@ while True:  # Run until solved
         else:
             # Predict action Q-values
             # From environment state
-            action_probs = model.predict(np.expand_dims(np.stack([np.vstack([a,state]) for a in possibleActions]).astype('float32'),
-                                                        axis=3))
+            action_probs = get_action_probs(model, possibleActions, state)
             # Take best action
             action = np.argmax(action_probs)
             if do_print:
@@ -193,6 +196,7 @@ while True:  # Run until solved
 
         # Save actions and states in replay buffer
         action_history.append(possibleActions[action])
+        possible_actions.append(possibleActions)
         state_history.append(state)
         done_history.append(done)
         rewards_history.append(reward)
@@ -207,17 +211,18 @@ while True:  # Run until solved
             # state_sample = np.array([state_history[i] for i in indices]).astype("float32")
             state_next_sample = np.array([state_history[i+num_players] for i in indices]).astype("float32")
             state_action_sample = np.array([np.vstack([np.array(action_history[i]),state_history[i]]) for i in indices]).astype("float32")
-            state_action_next_sample = np.array([np.vstack([np.array(action_history[i+num_players]),state_history[i+num_players]]) for i in indices])
-            rewards_sample = np.array([rewards_history[i] for i in indices]).astype("float32")
+            state_action_next_sample = np.stack([np.vstack([np.array(action_history[i+num_players]),state_history[i+num_players]]) for i in indices])
             action_sample = [action_history[i] for i in indices]
-            action_next_sample = [action_history[i+num_players] for i in indices]
             done_sample = np.array([any([done_history[i+j] for j in range(min(num_players, len(done_history)-i))]) for i in indices]).astype("float32")
-
+            rewards_sample = np.array([rewards_history[i] for i in indices]).astype("float32")
+            future_rewards = np.array([ max(get_action_probs(model_target,
+                                                              possible_actions[i+num_players],
+                                                              state_history[i+num_players]))[0]  for i in indices]).astype("float32")
             # Build the updated Q-values for the sampled future states
             # Use the target model for stability
-            future_rewards = model_target.predict(np.expand_dims(state_action_next_sample,axis=3))
+            # future_rewards = model_target.predict(np.expand_dims(state_action_next_sample,axis=3))
             # Q value = reward + discount factor * expected future reward
-            updated_q_values = rewards_sample + gamma * future_rewards * (1-done_sample)
+            updated_q_values = np.expand_dims(done_sample*rewards_sample,axis=1) + gamma * (1-np.expand_dims(done_sample,axis=1))*future_rewards
 
             # Create a mask so we only calculate loss on the updated Q-values
           #  masks = tf.one_hot(action_sample, num_actions)
@@ -250,6 +255,7 @@ while True:  # Run until solved
             del rewards_history[:1]
             del state_history[:1]
             del action_history[:1]
+            del possible_actions[:1]
             del done_history[:1]
 
         if done:
