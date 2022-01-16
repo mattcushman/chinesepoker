@@ -102,9 +102,8 @@ def create_q_model():
     layer1 = layers.Dense(32, activation="relu")(inputs)
     layer2 = layers.Dense(64, activation="relu")(layer1)
     layer3 = layers.Dense(64, activation="relu")(layer2)
-    layer4 = layers.Dense(128, activation="relu")(layer3)
-    layer5 = layers.Flatten()(layer4)
-    action = layers.Dense(1, activation="linear")(layer5)
+    layer4 = layers.Flatten()(layer3)
+    action = layers.Dense(1, activation="linear")(layer4)
     model = keras.Model(inputs=inputs, outputs=action)
     model.compile(optimizer='adam', loss=loss_function)
     return model
@@ -222,7 +221,7 @@ while True:  # Run until solved
             # Use the target model for stability
             # future_rewards = model_target.predict(np.expand_dims(state_action_next_sample,axis=3))
             # Q value = reward + discount factor * expected future reward
-            updated_q_values = np.expand_dims(done_sample*rewards_sample,axis=1) + gamma * (1-np.expand_dims(done_sample,axis=1))*future_rewards
+            updated_q_values = np.expand_dims(done_sample*rewards_sample,axis=1) + gamma * (np.expand_dims((1-done_sample)*future_rewards,axis=1))
 
             # Create a mask so we only calculate loss on the updated Q-values
           #  masks = tf.one_hot(action_sample, num_actions)
