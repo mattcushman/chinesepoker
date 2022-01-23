@@ -78,7 +78,7 @@ batch_size = 32  # Size of batch taken from replay buffer
 max_steps_per_episode = 10000
 
 num_cards = 52
-hist_len = 30
+hist_len = 16
 num_players = 2
 
 # Use the Baseline Atari environment because of Deepmind helper functions
