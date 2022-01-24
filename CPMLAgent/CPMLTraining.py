@@ -67,7 +67,7 @@ import CPMLGameEnv
 
 # Configuration paramaters for the whole setup
 gamma = 0.99  # Discount factor for past rewards
-epsilon = 1.0  # Epsilon greedy parameter
+epsilon = 0.75  # Epsilon greedy parameter
 epsilon_min = 0.1  # Minimum epsilon greedy parameter
 epsilon_max = 1.0  # Maximum epsilon greedy parameter
 epsilon_interval = (
@@ -99,9 +99,9 @@ def create_q_model():
     # Network defined by the Deepmind paper
     inputs = layers.Input(shape=(hist_len+2, num_cards,1))
     layer1 = layers.Conv2D(32,4, activation="relu")(inputs)
-    layer2 = layers.Flatten()(layer1)
-    layer3 = layers.Dense(64, activation="relu")(layer2)
-    layer4 = layers.Dense(32, activation="relu")(layer3)
+    layer2 = layers.Conv1D(64,4, activation="relu")(layer1)
+    layer3 = layers.Flatten()(layer2)
+    layer4 = layers.Dense(64, activation="relu")(layer3)
     action = layers.Dense(1, activation="linear")(layer4)
     model = keras.Model(inputs=inputs, outputs=action)
     model.compile(optimizer='adam', loss=loss_function)
@@ -130,11 +130,10 @@ state_history = []
 done_history = []
 possible_actions = []
 rewards_history = []
-running_reward = 0
 episode_count = 0
 frame_count = 0
 # Number of frames to take random action and observe output
-epsilon_random_frames = 10000
+epsilon_random_frames = 1
 # Number of frames for exploration
 epsilon_greedy_frames = 100000.0
 # Maximum replay length
@@ -184,6 +183,9 @@ while True:  # Run until solved
             for i,(hand,prob) in enumerate(zip(env.game.getMoves(), action_probs.tolist())):
                  print(f"({i}) {env.game.cardsToString(hand):>15} {prob[0]:8.6f}")
 
+    if do_print:
+        print(f'Move {env.game.cardsToString(env.game.getMoves()[action])}')
+
     # Decay probability of taking random action
     epsilon -= epsilon_interval / epsilon_greedy_frames
     epsilon = max(epsilon, epsilon_min)
@@ -191,6 +193,8 @@ while True:  # Run until solved
     # Apply the sampled action in our environment
     state_next, reward, done, _ = env.step(action)
     state_next = np.array(state_next)
+    if do_print:
+        print(f'Reward={reward}')
 
     # Save actions and states in replay buffer
     action_history.append(possibleActions[action])
@@ -206,11 +210,7 @@ while True:  # Run until solved
         indices = np.random.choice(range(len(done_history)-num_players), size=batch_size)
 
         # Using list comprehension to sample from replay buffer
-        # state_sample = np.array([state_history[i] for i in indices]).astype("float32")
-        state_next_sample = np.array([state_history[i+num_players] for i in indices]).astype("float32")
         state_action_sample = np.array([np.vstack([np.array(action_history[i]),state_history[i]]) for i in indices]).astype("float32")
-        state_action_next_sample = np.stack([np.vstack([np.array(action_history[i+num_players]),state_history[i+num_players]]) for i in indices])
-        action_sample = [action_history[i] for i in indices]
         done_sample = np.array([any([done_history[i+j] for j in range(min(num_players, len(done_history)-i))]) for i in indices]).astype("float32")
         rewards_sample = np.array([rewards_history[i] for i in indices]).astype("float32")
         future_rewards = np.array([ max(get_action_probs(model_target,
@@ -242,9 +242,6 @@ while True:  # Run until solved
         print("Update target network")
         # update the the target network with new weights
         model_target.set_weights(model.get_weights())
-        # Log details
-        template = "running reward: {:.2f} at episode {}, frame count {}"
-        print(template.format(running_reward, episode_count, frame_count))
         print("Saving model")
         model.save('cpmlModel')
 
