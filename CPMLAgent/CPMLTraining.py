@@ -152,9 +152,10 @@ def combine_state_action(state, action):
 def get_action_probs(model,possibleActions,state):
     return model.predict(np.expand_dims(np.stack([np.vstack([a, state]) for a in possibleActions]).astype('float32'),axis=3))
 
-
+done=True
 while True:  # Run until solved
-    state = np.array(env.reset())
+    if done:
+        state = np.array(env.reset())
 
     if frame_count%10==0:
         print(f'frame count={frame_count}')
