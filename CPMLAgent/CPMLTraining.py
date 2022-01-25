@@ -100,7 +100,7 @@ def create_q_model():
     inputs = layers.Input(shape=(hist_len+2, num_cards,))
     layer1 = layers.Conv1D(32,4, activation="relu")(inputs)
     layer2 = layers.Flatten()(layer1)
-    layer3 = layers.Conv1D(64, activation="relu")(layer2)
+    layer3 = layers.Dense(64, activation="relu")(layer2)
     layer4 = layers.Dense(64, activation="relu")(layer3)
     action = layers.Dense(1, activation="linear")(layer4)
     model = keras.Model(inputs=inputs, outputs=action)
