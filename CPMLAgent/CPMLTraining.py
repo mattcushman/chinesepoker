@@ -67,13 +67,13 @@ import CPMLGameEnv
 
 # Configuration paramaters for the whole setup
 gamma = 0.99  # Discount factor for past rewards
-epsilon = 0.75  # Epsilon greedy parameter
+epsilon = 1.00  # Epsilon greedy parameter
 epsilon_min = 0.1  # Minimum epsilon greedy parameter
 epsilon_max = 1.0  # Maximum epsilon greedy parameter
 epsilon_interval = (
     epsilon_max - epsilon_min
 )  # Rate at which to reduce chance of random action being taken
-batch_size = 32  # Size of batch taken from replay buffer
+batch_size = 64  # Size of batch taken from replay buffer
 max_steps_per_episode = 10000
 
 num_cards = 52
@@ -97,10 +97,10 @@ is chosen by selecting the larger of the four Q-values predicted in the output l
 
 def create_q_model():
     # Network defined by the Deepmind paper
-    inputs = layers.Input(shape=(hist_len+2, num_cards,1))
-    layer1 = layers.Conv2D(32,4, activation="relu")(inputs)
-    layer2 = layers.Conv1D(64,4, activation="relu")(layer1)
-    layer3 = layers.Flatten()(layer2)
+    inputs = layers.Input(shape=(hist_len+2, num_cards,))
+    layer1 = layers.Conv1D(32,4, activation="relu")(inputs)
+    layer2 = layers.Flatten()(layer1)
+    layer3 = layers.Conv1D(64, activation="relu")(layer2)
     layer4 = layers.Dense(64, activation="relu")(layer3)
     action = layers.Dense(1, activation="linear")(layer4)
     model = keras.Model(inputs=inputs, outputs=action)
