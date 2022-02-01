@@ -73,8 +73,7 @@ epsilon_max = 1.0  # Maximum epsilon greedy parameter
 epsilon_interval = (
     epsilon_max - epsilon_min
 )  # Rate at which to reduce chance of random action being taken
-batch_size = 64  # Size of batch taken from replay buffer
-max_steps_per_episode = 10000
+batch_size = 256  # Size of batch taken from replay buffer
 
 num_cards = 52
 hist_len = 16
@@ -98,11 +97,12 @@ def create_q_model():
     # Network defined by the Deepmind paper
     inputs = layers.Input(shape=(hist_len+2,num_cards,))
     perm = layers.Permute((2,1))(inputs)
-    layer1 = layers.Conv1D(32,8, activation="relu")(perm)
-    layer2 = layers.Flatten()(layer1)
-    layer3 = layers.Dense(64, activation="relu")(layer2)
-    layer4 = layers.Dense(64, activation="relu")(layer3)
-    action = layers.Dense(1, activation="linear")(layer4)
+    layer1 = layers.Conv1D(32,4, activation="relu")(perm)
+    layer2 = layers.Conv1D(32,4, activation="relu")(layer1)
+    layer3 = layers.Flatten()(layer2)
+    layer4 = layers.Dense(512, activation="relu")(layer3)
+    layer5 = layers.Dense(512, activation="relu")(layer4)
+    action = layers.Dense(1, activation="linear")(layer5)
     model = keras.Model(inputs=inputs, outputs=action)
     model.compile(optimizer='adam', loss=loss_function)
     return model
@@ -122,7 +122,7 @@ model_target = create_q_model()
 """
 # In the Deepmind paper they use RMSProp however then Adam optimizer
 # improves training time
-optimizer = keras.optimizers.Adam(learning_rate=0.00025, clipnorm=1.0)
+optimizer = keras.optimizers.Adam(learning_rate=0.001, clipnorm=1.0)
 
 # Experience replay buffers
 action_history = []
@@ -135,21 +135,20 @@ frame_count = 0
 # Number of frames to take random action and observe output
 epsilon_random_frames = 1
 # Number of frames for exploration
-epsilon_greedy_frames = 100000.0
+epsilon_greedy_frames = 10000.0
 # Maximum replay length
 # Note: The Deepmind paper suggests 1000000 however this causes memory issues
-max_memory_length = 20000
+max_memory_length = 100000
 # Train the model after 4 actions
-update_after_actions = 4
+update_after_actions = 8
 # How often to update the target network
-update_target_network = 10000
-
+update_target_network = 1000
 
 def combine_state_action(state, action):
     return np.array([[action]+state]).astype("float32")
 
 def get_action_probs(model,possibleActions,state):
-    return model.predict(np.expand_dims(np.stack([np.vstack([a, state]) for a in possibleActions]).astype('float32'),axis=3))
+    return model.predict(np.stack([np.vstack([a, state]) for a in possibleActions]).astype('float32'))
 
 def get_group_action_probs(model, possibleActions, states):
     states_pa=[]
@@ -160,6 +159,7 @@ def get_group_action_probs(model, possibleActions, states):
     actionProbs = np.zeros(len(states))
     for i,s in enumerate(states):
         actionProbs[i] = max(ap[k:k+len(possibleActions[i])])[0]
+        k+=len(possibleActions[i])
     return actionProbs
 
 done=True
@@ -192,7 +192,7 @@ while True:  # Run until solved
         if do_print:
             print(f"Best action {action}")
             for i,(hand,prob) in enumerate(zip(env.game.getMoves(), action_probs.tolist())):
-                 print(f"({i}) {env.game.cardsToString(hand):>15} {prob[0]:8.6f}")
+                 print(f"({i:2}) {env.game.cardsToString(hand):>15} {prob[0]:8.6f}")
 
     if do_print:
         print(f'Move {env.game.cardsToString(env.game.getMoves()[action])}')
