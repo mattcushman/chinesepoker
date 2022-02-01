@@ -94,11 +94,11 @@ is chosen by selecting the larger of the four Q-values predicted in the output l
 
 """
 
-
 def create_q_model():
     # Network defined by the Deepmind paper
-    inputs = layers.Input(shape=(hist_len+2, num_cards,))
-    layer1 = layers.Conv1D(32,4, activation="relu")(inputs)
+    inputs = layers.Input(shape=(hist_len+2,num_cards,))
+    perm = layers.Permute((2,1))(inputs)
+    layer1 = layers.Conv1D(32,8, activation="relu")(perm)
     layer2 = layers.Flatten()(layer1)
     layer3 = layers.Dense(64, activation="relu")(layer2)
     layer4 = layers.Dense(64, activation="relu")(layer3)
@@ -151,15 +151,26 @@ def combine_state_action(state, action):
 def get_action_probs(model,possibleActions,state):
     return model.predict(np.expand_dims(np.stack([np.vstack([a, state]) for a in possibleActions]).astype('float32'),axis=3))
 
+def get_group_action_probs(model, possibleActions, states):
+    states_pa=[]
+    for s,pa in zip(states,possibleActions):
+        states_pa += [np.vstack([a,s]) for a in pa]
+    ap=model.predict(np.stack(states_pa).astype('float32'))
+    k=0
+    actionProbs = np.zeros(len(states))
+    for i,s in enumerate(states):
+        actionProbs[i] = max(ap[k:k+len(possibleActions[i])])[0]
+    return actionProbs
+
 done=True
 while True:  # Run until solved
     if done:
         state = np.array(env.reset())
+        do_print = (frame_count%20==0)
 
     if frame_count%10==0:
         print(f'frame count={frame_count}')
 
-    do_print = (frame_count % 1000)<20
     if do_print:
         print(env.prettyState())
     frame_count += 1
@@ -213,9 +224,9 @@ while True:  # Run until solved
         state_action_sample = np.array([np.vstack([np.array(action_history[i]),state_history[i]]) for i in indices]).astype("float32")
         done_sample = np.array([any([done_history[i+j] for j in range(min(num_players, len(done_history)-i))]) for i in indices]).astype("float32")
         rewards_sample = np.array([rewards_history[i] for i in indices]).astype("float32")
-        future_rewards = np.array([ max(get_action_probs(model_target,
-                                                          possible_actions[i+num_players],
-                                                          state_history[i+num_players]))[0]  for i in indices]).astype("float32")
+        future_rewards = get_group_action_probs(model_target,
+                                                [possible_actions[i+num_players] for i in indices],
+                                                [state_history[i+num_players] for i in indices])
         # Build the updated Q-values for the sampled future states
         # Use the target model for stability
         # future_rewards = model_target.predict(np.expand_dims(state_action_next_sample,axis=3))
@@ -227,7 +238,7 @@ while True:  # Run until solved
 
         with tf.GradientTape() as tape:
             # Train the model on the states and updated Q-values
-            q_values = model(np.expand_dims(state_action_sample,axis=3))
+            q_values = model(state_action_sample)
 
             # Apply the masks to the Q-values to get the Q-value for action taken
  #           q_action = tf.reduce_sum(tf.multiply(q_values, masks), axis=1)

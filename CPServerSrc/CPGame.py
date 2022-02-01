@@ -2,7 +2,7 @@ import itertools
 import numpy as np
 
 ranks = ['4','5','6','7','8','9','T','J','Q','K','A','2','3']
-suits = ['d','c','h','s']
+suits = ['\u2666','\u2663','\u2665','\u2660']
 
 class MoveError(Exception):
     def __init__(self, msg, move):
@@ -147,6 +147,6 @@ class CPGame():
     def prettyState(self):
         str = " | ".join(f"p={p} hand={self.cardsToString(self.hands[p])}" for p in self.players)
         if self.playerMoves == []:
-            return str
+            return f"Start: {str}"
         else:
             return f"player={self.playerMoves[-1][0]} move={self.cardsToString(self.playerMoves[-1][1])} / "+str
