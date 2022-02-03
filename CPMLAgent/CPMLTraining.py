@@ -62,6 +62,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
+from keras.utils.vis_utils import plot_model
 import CPMLGameEnv
 
 
@@ -70,13 +71,14 @@ gamma = 0.99  # Discount factor for past rewards
 epsilon = 1.00  # Epsilon greedy parameter
 epsilon_min = 0.1  # Minimum epsilon greedy parameter
 epsilon_max = 1.0  # Maximum epsilon greedy parameter
-epsilon_interval = (
-    epsilon_max - epsilon_min
-)  # Rate at which to reduce chance of random action being taken
-batch_size = 256  # Size of batch taken from replay buffer
+epsilon_interval = (epsilon_max - epsilon_min)  # Rate at which to reduce chance of random action being taken
+epsilon_random_frames = 1
+# Number of frames for exploration
+epsilon_greedy_frames = 1000.0
+batch_size = 32  # Size of batch taken from replay buffer
 
 num_cards = 52
-hist_len = 16
+hist_len = 30
 num_players = 2
 
 # Use the Baseline Atari environment because of Deepmind helper functions
@@ -96,15 +98,16 @@ is chosen by selecting the larger of the four Q-values predicted in the output l
 def create_q_model():
     # Network defined by the Deepmind paper
     inputs = layers.Input(shape=(hist_len+2,num_cards,))
-    perm = layers.Permute((2,1))(inputs)
-    layer1 = layers.Conv1D(32,4, activation="relu")(perm)
-    layer2 = layers.Conv1D(32,4, activation="relu")(layer1)
-    layer3 = layers.Flatten()(layer2)
-    layer4 = layers.Dense(512, activation="relu")(layer3)
-    layer5 = layers.Dense(512, activation="relu")(layer4)
+    reshape = layers.Reshape((hist_len+2,13,4))(inputs)
+    permute = layers.Permute((2,3,1))(reshape)
+    layer1 = layers.Conv2D(64,4, activation="relu")(permute)
+    layer3 = layers.Flatten()(layer1)
+    layer4 = layers.Dense(256, activation="relu")(layer3)
+    layer5 = layers.Dense(256, activation="relu")(layer4)
     action = layers.Dense(1, activation="linear")(layer5)
     model = keras.Model(inputs=inputs, outputs=action)
     model.compile(optimizer='adam', loss=loss_function)
+    print(model.summary())
     return model
 
 
@@ -122,7 +125,7 @@ model_target = create_q_model()
 """
 # In the Deepmind paper they use RMSProp however then Adam optimizer
 # improves training time
-optimizer = keras.optimizers.Adam(learning_rate=0.001, clipnorm=1.0)
+optimizer = keras.optimizers.Adam(learning_rate=0.00025, clipnorm=1.0)
 
 # Experience replay buffers
 action_history = []
@@ -133,16 +136,13 @@ rewards_history = []
 episode_count = 0
 frame_count = 0
 # Number of frames to take random action and observe output
-epsilon_random_frames = 1
-# Number of frames for exploration
-epsilon_greedy_frames = 10000.0
 # Maximum replay length
 # Note: The Deepmind paper suggests 1000000 however this causes memory issues
-max_memory_length = 100000
+max_memory_length = 20000
 # Train the model after 4 actions
-update_after_actions = 8
+update_after_actions = 4
 # How often to update the target network
-update_target_network = 1000
+update_target_network = 10000
 
 def combine_state_action(state, action):
     return np.array([[action]+state]).astype("float32")
