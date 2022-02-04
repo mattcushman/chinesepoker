@@ -63,27 +63,23 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 from keras.utils.vis_utils import plot_model
-import CPMLGameEnv
+from CPMLAgent  import CPMLGameEnv
+from CPMLAgent.CPMLModelDef import create_q_model, get_action_probs, get_group_action_probs, num_players, hist_len, loss_function
 
 
 # Configuration paramaters for the whole setup
 gamma = 0.99  # Discount factor for past rewards
 epsilon = 1.00  # Epsilon greedy parameter
-epsilon_min = 0.1  # Minimum epsilon greedy parameter
+epsilon_min = 0.05  # Minimum epsilon greedy parameter
 epsilon_max = 1.0  # Maximum epsilon greedy parameter
 epsilon_interval = (epsilon_max - epsilon_min)  # Rate at which to reduce chance of random action being taken
 epsilon_random_frames = 1
 # Number of frames for exploration
 epsilon_greedy_frames = 1000.0
-batch_size = 32  # Size of batch taken from replay buffer
-
-num_cards = 52
-hist_len = 30
-num_players = 2
+batch_size = 48  # Size of batch taken from replay buffer
 
 # Use the Baseline Atari environment because of Deepmind helper functions
 env = CPMLGameEnv.CPMLGameEnv(num_players, hist_len)
-loss_function = keras.losses.Huber()
 
 """
 ## Implement the Deep Q-Network
@@ -95,20 +91,6 @@ is chosen by selecting the larger of the four Q-values predicted in the output l
 
 """
 
-def create_q_model():
-    # Network defined by the Deepmind paper
-    inputs = layers.Input(shape=(hist_len+2,num_cards,))
-    reshape = layers.Reshape((hist_len+2,13,4))(inputs)
-    permute = layers.Permute((2,3,1))(reshape)
-    layer1 = layers.Conv2D(64,4, activation="relu")(permute)
-    layer3 = layers.Flatten()(layer1)
-    layer4 = layers.Dense(256, activation="relu")(layer3)
-    layer5 = layers.Dense(256, activation="relu")(layer4)
-    action = layers.Dense(1, activation="linear")(layer5)
-    model = keras.Model(inputs=inputs, outputs=action)
-    model.compile(optimizer='adam', loss=loss_function)
-    print(model.summary())
-    return model
 
 
 # The first model makes the predictions for Q-values which are used to
@@ -144,23 +126,6 @@ update_after_actions = 4
 # How often to update the target network
 update_target_network = 10000
 
-def combine_state_action(state, action):
-    return np.array([[action]+state]).astype("float32")
-
-def get_action_probs(model,possibleActions,state):
-    return model.predict(np.stack([np.vstack([a, state]) for a in possibleActions]).astype('float32'))
-
-def get_group_action_probs(model, possibleActions, states):
-    states_pa=[]
-    for s,pa in zip(states,possibleActions):
-        states_pa += [np.vstack([a,s]) for a in pa]
-    ap=model.predict(np.stack(states_pa).astype('float32'))
-    k=0
-    actionProbs = np.zeros(len(states))
-    for i,s in enumerate(states):
-        actionProbs[i] = max(ap[k:k+len(possibleActions[i])])[0]
-        k+=len(possibleActions[i])
-    return actionProbs
 
 done=True
 while True:  # Run until solved
