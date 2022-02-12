@@ -27,6 +27,9 @@ class CPMLGameEnv(object):
     def prettyState(self):
         return self.game.prettyState()
     def actionHistory(self, n):
-        return [self.cardsToVector(self.game.hands[self.game.toMove])] + self.playHist[:n] + [self.cardsToVector([]) for k in range(n-len(self.playHist))]
+        if self.histLen > 0:
+            return [self.cardsToVector(self.game.hands[self.game.toMove])] + self.playHist[:n] + [self.cardsToVector([]) for k in range(n-len(self.playHist))]
+        else:
+            return [self.cardsToVector(self.game.hands[self.game.toMove])] + self.playHist[:n]
 
 

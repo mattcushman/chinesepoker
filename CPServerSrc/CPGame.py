@@ -145,8 +145,8 @@ class CPGame():
         return any([len(hand)==0 for hand in self.hands.values()])
 
     def prettyState(self):
-        str = "\n".join(f"player={p} hand={self.cardsToString(self.hands[p])}" for p in self.players)
+        str = "\n".join(f'player={p} {[" ","*"][p==self.toMove]} hand={self.cardsToString(self.hands[p])}' for p in self.players)
         if self.playerMoves == []:
-            return f"Start: {str}"
+            return f"Start: \n{str}"
         else:
-            return f"player={self.playerMoves[-1][0]} move=[{self.cardsToString(self.playerMoves[-1][1])}] \n "+str
+            return f"player={self.playerMoves[-1][0]} move=[{self.cardsToString(self.playerMoves[-1][1])}] \n"+str

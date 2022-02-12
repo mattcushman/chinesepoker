@@ -61,8 +61,6 @@ million frames which are processed in less than 24 hours on a modern machine.
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras import layers
-from keras.utils.vis_utils import plot_model
 from CPMLAgent  import CPMLGameEnv
 from CPMLAgent.CPMLModelDef import create_q_model, get_action_probs, get_group_action_probs, num_players, hist_len, loss_function
 
@@ -73,10 +71,10 @@ epsilon = 1.00  # Epsilon greedy parameter
 epsilon_min = 0.05  # Minimum epsilon greedy parameter
 epsilon_max = 1.0  # Maximum epsilon greedy parameter
 epsilon_interval = (epsilon_max - epsilon_min)  # Rate at which to reduce chance of random action being taken
-epsilon_random_frames = 1
+epsilon_random_frames = 10000
 # Number of frames for exploration
-epsilon_greedy_frames = 1000.0
-batch_size = 48  # Size of batch taken from replay buffer
+epsilon_greedy_frames = 10000.0
+batch_size = 32  # Size of batch taken from replay buffer
 
 # Use the Baseline Atari environment because of Deepmind helper functions
 env = CPMLGameEnv.CPMLGameEnv(num_players, hist_len)
@@ -95,11 +93,11 @@ is chosen by selecting the larger of the four Q-values predicted in the output l
 
 # The first model makes the predictions for Q-values which are used to
 # make a action.
-model = create_q_model()
+models = [create_q_model() for i in range(num_players)]
 # Build a target model for the prediction of future rewards.
 # The weights of a target model get updated every 10000 steps thus when the
 # loss between the Q-values is calculated the target Q-value is stable.
-model_target = create_q_model()
+model_targets = [create_q_model() for i in range(num_players)]
 
 
 """
@@ -110,11 +108,11 @@ model_target = create_q_model()
 optimizer = keras.optimizers.Adam(learning_rate=0.00025, clipnorm=1.0)
 
 # Experience replay buffers
-action_history = []
-state_history = []
-done_history = []
-possible_actions = []
-rewards_history = []
+action_history = [[] for i in range(num_players)]
+state_history =  [[] for i in range(num_players)]
+done_history =  [[] for i in range(num_players)]
+possible_actions =  [[] for i in range(num_players)]
+rewards_history =  [[] for i in range(num_players)]
 episode_count = 0
 frame_count = 0
 # Number of frames to take random action and observe output
@@ -132,11 +130,16 @@ while True:  # Run until solved
     if done:
         state = np.array(env.reset())
         do_print = (frame_count%20==0)
+        if do_print:
+            print("==============================================================")
+
+    playerToMove = env.game.toMove
 
     if frame_count%10==0:
         print(f'frame count={frame_count}')
 
     if do_print:
+        print("\n")
         print(env.prettyState())
     frame_count += 1
 
@@ -151,16 +154,16 @@ while True:  # Run until solved
     else:
         # Predict action Q-values
         # From environment state
-        action_probs = get_action_probs(model, possibleActions, state)
+        action_probs = get_action_probs(models[playerToMove], possibleActions, state)
         # Take best action
         action = np.argmax(action_probs)
         if do_print:
-            print(f"Best action {action}")
             for i,(hand,prob) in enumerate(zip(env.game.getMoves(), action_probs.tolist())):
                  print(f"({i:2}) {env.game.cardsToString(hand):>15} {prob[0]:8.6f}")
+            print(f"Best action {action}")
 
     if do_print:
-        print(f'Move {env.game.cardsToString(env.game.getMoves()[action])}')
+        print(f'Move [{env.game.cardsToString(env.game.getMoves()[action])}]')
 
     # Decay probability of taking random action
     epsilon -= epsilon_interval / epsilon_greedy_frames
@@ -173,61 +176,65 @@ while True:  # Run until solved
         print(f'Reward={reward}')
 
     # Save actions and states in replay buffer
-    action_history.append(possibleActions[action])
-    possible_actions.append(possibleActions)
-    state_history.append(state)
-    done_history.append(done)
-    rewards_history.append(reward)
+    action_history[playerToMove].append(possibleActions[action])
+    possible_actions[playerToMove].append(possibleActions)
+    state_history[playerToMove].append(state)
+    done_history[playerToMove].append(done)
+    rewards_history[playerToMove].append(reward)
     state = state_next
 
-    # Update every fourth frame and once batch size is over 32
-    if frame_count % update_after_actions == 0 and len(done_history) > batch_size:
-        # Get indices of samples for replay buffers
-        indices = np.random.choice(range(len(done_history)-num_players), size=batch_size)
+    for playerToUpdate in range(num_players):
+        if frame_count % update_after_actions == 0 and len(done_history[playerToUpdate]) > batch_size:
+            # Get indices of samples for replay buffers
+            indices = np.random.choice(range(len(done_history[playerToUpdate])-num_players), size=batch_size)
 
-        # Using list comprehension to sample from replay buffer
-        state_action_sample = np.array([np.vstack([np.array(action_history[i]),state_history[i]]) for i in indices]).astype("float32")
-        done_sample = np.array([any([done_history[i+j] for j in range(min(num_players, len(done_history)-i))]) for i in indices]).astype("float32")
-        rewards_sample = np.array([rewards_history[i] for i in indices]).astype("float32")
-        future_rewards = get_group_action_probs(model_target,
-                                                [possible_actions[i+num_players] for i in indices],
-                                                [state_history[i+num_players] for i in indices])
-        # Build the updated Q-values for the sampled future states
-        # Use the target model for stability
-        # future_rewards = model_target.predict(np.expand_dims(state_action_next_sample,axis=3))
-        # Q value = reward + discount factor * expected future reward
-        updated_q_values = np.expand_dims(done_sample*rewards_sample,axis=1) + gamma * (np.expand_dims((1-done_sample)*future_rewards,axis=1))
+            # Using list comprehension to sample from replay buffer
+            state_action_sample = np.array([np.vstack([np.array(action_history[playerToUpdate][i]),
+                                                       state_history[playerToUpdate][i]]) for i in indices]).astype("float32")
+            state_action_sample = {'move': np.array([action_history[playerToUpdate][i] for i in indices]).astype("float32"),
+                                   'hand': np.array([state_history[playerToUpdate][i][0] for i in indices]).astype("float32"),
+                                   'history': np.array([state_history[playerToUpdate][i][1:] for i in indices]).astype("float32")}
+            done_sample = np.array([any([done_history[playerToUpdate][i+j] for j in range(min(num_players, len(done_history[playerToUpdate])-i))])
+                                    for i in indices]).astype("float32")
+            rewards_sample = np.array([rewards_history[playerToUpdate][i] for i in indices]).astype("float32")
+            future_rewards = get_group_action_probs(model_targets[playerToUpdate],
+                                                    [possible_actions[playerToUpdate][i+num_players] for i in indices],
+                                                    [state_history[playerToUpdate][i+num_players] for i in indices])
+            # Build the updated Q-values for the sampled future states
+            # Use the target model for stability
+            # future_rewards = model_target.predict(np.expand_dims(state_action_next_sample,axis=3))
+            # Q value = reward + discount factor * expected future reward
+            updated_q_values = np.expand_dims(done_sample*rewards_sample,axis=1) + gamma * (np.expand_dims((1-done_sample)*future_rewards,axis=1))
 
-        # Create a mask so we only calculate loss on the updated Q-values
-      #  masks = tf.one_hot(action_sample, num_actions)
+            with tf.GradientTape() as tape:
+                # Train the model on the states and updated Q-values
+                q_values = models[playerToUpdate]((state_action_sample["move"],
+                                                   state_action_sample["hand"],
+                                                   state_action_sample["history"],))
+                # Apply the masks to the Q-values to get the Q-value for action taken
+     #           q_action = tf.reduce_sum(tf.multiply(q_values, masks), axis=1)
+                # Calculate loss between new Q-value and old Q-value
+                loss = loss_function(updated_q_values, q_values)
 
-        with tf.GradientTape() as tape:
-            # Train the model on the states and updated Q-values
-            q_values = model(state_action_sample)
-
-            # Apply the masks to the Q-values to get the Q-value for action taken
- #           q_action = tf.reduce_sum(tf.multiply(q_values, masks), axis=1)
-            # Calculate loss between new Q-value and old Q-value
-            loss = loss_function(updated_q_values, q_values)
-
-        # Backpropagation
-        grads = tape.gradient(loss, model.trainable_variables)
-        optimizer.apply_gradients(zip(grads, model.trainable_variables))
+            # Backpropagation
+            grads = tape.gradient(loss, models[playerToUpdate].trainable_variables)
+            optimizer.apply_gradients(zip(grads, models[playerToUpdate].trainable_variables))
 
     if frame_count % update_target_network == 0:
-        print("Update target network")
-        # update the the target network with new weights
-        model_target.set_weights(model.get_weights())
-        print("Saving model")
-        model.save('cpmlModel')
+        for playerToUpdate in range(num_players):
+            print("Update target network")
+            # update the the target network with new weights
+            model_targets[playerToUpdate].set_weights(models[playerToUpdate].get_weights())
+            print("Saving model")
+            models[playerToUpdate].save(f'cpmlModel-{playerToUpdate}')
 
     # Limit the state and reward history
     if len(rewards_history) > max_memory_length:
-        del rewards_history[:1]
-        del state_history[:1]
-        del action_history[:1]
-        del possible_actions[:1]
-        del done_history[:1]
+        del rewards_history[playerToMove][:1]
+        del state_history[playerToMove][:1]
+        del action_history[playerToMove][:1]
+        del possible_actions[playerToMove][:1]
+        del done_history[playerToMove][:1]
 
 
 
