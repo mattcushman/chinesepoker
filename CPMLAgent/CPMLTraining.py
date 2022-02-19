@@ -66,8 +66,8 @@ from CPMLAgent.CPMLModelDef import create_q_model, get_action_probs, get_group_a
 
 
 # Configuration paramaters for the whole setup
-gamma = 0.99  # Discount factor for past rewards
-epsilon = 1.00  # Epsilon greedy parameter
+gamma = 0.98  # Discount factor for past rewards
+epsilon = 1.0  # Epsilon greedy parameter
 epsilon_min = 0.05  # Minimum epsilon greedy parameter
 epsilon_max = 1.0  # Maximum epsilon greedy parameter
 epsilon_interval = (epsilon_max - epsilon_min)  # Rate at which to reduce chance of random action being taken
@@ -180,6 +180,11 @@ while True:  # Run until solved
     possible_actions[playerToMove].append(possibleActions)
     state_history[playerToMove].append(state)
     done_history[playerToMove].append(done)
+    if done:
+        for i in range(playerToMove):
+            if i!=playerToMove:
+                done_history[i][-1]=True
+
     rewards_history[playerToMove].append(reward)
     state = state_next
 
@@ -189,8 +194,6 @@ while True:  # Run until solved
             indices = np.random.choice(range(len(done_history[playerToUpdate])-num_players), size=batch_size)
 
             # Using list comprehension to sample from replay buffer
-            state_action_sample = np.array([np.vstack([np.array(action_history[playerToUpdate][i]),
-                                                       state_history[playerToUpdate][i]]) for i in indices]).astype("float32")
             state_action_sample = {'move': np.array([action_history[playerToUpdate][i] for i in indices]).astype("float32"),
                                    'hand': np.array([state_history[playerToUpdate][i][0] for i in indices]).astype("float32"),
                                    'history': np.array([state_history[playerToUpdate][i][1:] for i in indices]).astype("float32")}
