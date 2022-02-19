@@ -197,8 +197,7 @@ while True:  # Run until solved
             state_action_sample = {'move': np.array([action_history[playerToUpdate][i] for i in indices]).astype("float32"),
                                    'hand': np.array([state_history[playerToUpdate][i][0] for i in indices]).astype("float32"),
                                    'history': np.array([state_history[playerToUpdate][i][1:] for i in indices]).astype("float32")}
-            done_sample = np.array([any([done_history[playerToUpdate][i+j] for j in range(min(num_players, len(done_history[playerToUpdate])-i))])
-                                    for i in indices]).astype("float32")
+            done_sample = np.array([done_history[playerToUpdate][i] for i in indices]).astype("float32")
             rewards_sample = np.array([rewards_history[playerToUpdate][i] for i in indices]).astype("float32")
             future_rewards = get_group_action_probs(model_targets[playerToUpdate],
                                                     [possible_actions[playerToUpdate][i+num_players] for i in indices],
