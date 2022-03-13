@@ -40,7 +40,7 @@ def create_q_model():
 
     x = layers.concatenate([move_output, current_hand_output, hist_output])
     x = layers.Dense(128, activation="relu")(x)
-    x = layers.Dropout(0.1)(x)
+    x = layers.Dense(128, activation="relu")(x)
     x = layers.Dense(128, activation="relu")(x)
     action = layers.Dense(1, activation="linear")(x)
     model = keras.Model(inputs=[move_input, current_hand_input, hist_input], outputs=action)
