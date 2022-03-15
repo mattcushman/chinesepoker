@@ -3,26 +3,30 @@ from CPGame import CPGame
 class NoActiveGame(Exception):
     def __init__(self, gameId):
         self.gameId=gameId
+
 class InvalidMove(Exception):
     def __init__(self, gameId, move):
         self.gameId=gameId
         self.move=move
+
 class PlayerNotInGame(Exception):
     def __init__(self, playerId, gameId):
         self.gameId=gameId
         self.playerId=playerId
+
 class MakeReadyError(Exception):
     def __init__(self, msg):
         self.msg=msg
+
 class JoinGameError(Exception):
     def __init__(self, msg):
         self.msg=msg
 
 class CPPlayer():
-    def __init__(self, id, name):
+    def __init__(self, id, name, isAI=False):
         self.id=id
         self.name=name
-
+        self.isAI = isAI
 
 class CPGameManager():
     def __init__(self,seed=False):
@@ -34,9 +38,9 @@ class CPGameManager():
         self.activeGames=set()
         self.pendingGame=set()
         self.seed=seed
-    def newPlayer(self, name):
+    def newPlayer(self, name, isAI=False):
         newPlayerId = self.nextPlayerId
-        self.players[newPlayerId]=CPPlayer(newPlayerId, name)
+        self.players[newPlayerId]=CPPlayer(newPlayerId, name, isAI=isAI)
         self.nextPlayerId+=1
         return newPlayerId
     def getPlayerId(self, name):
@@ -77,6 +81,15 @@ class CPGameManager():
             raise InvalidMove(gameId, move)
         if game.done():
             self.activeGames.remove(gameId)
+    def runAIs(self):
+        while self.players[self.games[gameId].toMove].isAI:
+            aiEnv = self.players[self.games[gameId].toMove].aiEnv
+            possibleActions=aiEnv.get_possible_actions()
+            action_probs = get_action_probs(self.model, possibleActions, state)
+            action = np.argmax(action_probs)
+            hand = env.game.getMoves()[action]
+
+            game.implementMove(aiMove)
         return True
     def getGameState(self, gameId):
         if gameId==self.nextGameId:

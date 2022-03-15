@@ -30,8 +30,6 @@ while True:
         move=possibleActions[action]
     else:
         action_probs = get_action_probs(model, possibleActions, state)
-#        for i, (hand,p) in enumerate(zip(env.game.getMoves(),action_probs.tolist())):
-#            print(f"({i:2}) {p[0]:8.6f} {env.game.cardsToString(hand):>15}")
         action = np.argmax(action_probs)
         hand = env.game.getMoves()[action]
         print(f"Player {env.game.toMove} move is [{env.game.cardsToString(hand)}]")

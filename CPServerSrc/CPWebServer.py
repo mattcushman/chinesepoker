@@ -12,7 +12,12 @@ app.logger.setLevel(logging.DEBUG)
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 
-gm = CPGameManager(seed=os.getenv('CP_RANDOM_SEED'))
+def initGame():
+    gm = CPGameManager(seed=os.getenv('CP_RANDOM_SEED'))
+    gm,.apiNewPlayer("Jizz Balswactch")
+    return gm
+
+gm=initGame()
 
 @app.route('/newplayer/', methods=['POST'])
 @cross_origin()
@@ -90,4 +95,5 @@ if __name__ == '__main__':
         host='0.0.0.0'
     if port==None:
         port=105
+    gm=initGame()
     app.run(host=host, port=port)
