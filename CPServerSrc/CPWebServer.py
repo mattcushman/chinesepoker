@@ -14,7 +14,6 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 
 def initGame():
     gm = CPGameManager(seed=os.getenv('CP_RANDOM_SEED'))
-    gm.apiNewPlayer("Jizz Balswactch")
     return gm
 
 gm=initGame()
@@ -95,5 +94,5 @@ if __name__ == '__main__':
         host='0.0.0.0'
     if port==None:
         port=105
-    gm=initGame()
+    gm.newPlayer("Jizz Ballsnatch",True)
     app.run(host=host, port=port)
