@@ -42,7 +42,7 @@ class CPGameManager():
         self.pendingGame=set()
         self.seed=seed
         self.gameEnv=CPMLGameEnv.CPMLGameEnv(CPMLModelDef.num_players, CPMLModelDef.hist_len)
-        self.model=keras.models.load_model("../CPMLTextGame/cpmlModel0")
+        self.model=keras.models.load_model("../CPTextGame/cpmlModel0")
 
     def newPlayer(self, name, isAI=False):
         newPlayerId = self.nextPlayerId
