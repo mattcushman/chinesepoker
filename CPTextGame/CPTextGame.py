@@ -1,5 +1,4 @@
 import numpy as np
-import tensorflow as tf
 from tensorflow import keras
 from CPMLAgent import CPMLGameEnv
 from CPMLAgent.CPMLModelDef import get_action_probs, num_players, hist_len

@@ -1,4 +1,7 @@
 from CPGame import CPGame
+from CPMLAgent import CPMLModelDef
+from CPMLAgent import CPMLGameEnv
+from tensorflow import keras
 
 class NoActiveGame(Exception):
     def __init__(self, gameId):
@@ -38,6 +41,9 @@ class CPGameManager():
         self.activeGames=set()
         self.pendingGame=set()
         self.seed=seed
+        self.gameEnv=CPMLGameEnv.CPMLGameEnv(CPMLModelDef.num_players, CPMLModelDef.hist_len)
+        self.model=keras.models.load_model(modelFileName)
+
     def newPlayer(self, name, isAI=False):
         newPlayerId = self.nextPlayerId
         self.players[newPlayerId]=CPPlayer(newPlayerId, name, isAI=isAI)
@@ -81,15 +87,17 @@ class CPGameManager():
             raise InvalidMove(gameId, move)
         if game.done():
             self.activeGames.remove(gameId)
-    def runAIs(self):
+    def runAIs(self, gameId):
         while self.players[self.games[gameId].toMove].isAI:
-            aiEnv = self.players[self.games[gameId].toMove].aiEnv
-            possibleActions=aiEnv.get_possible_actions()
-            action_probs = get_action_probs(self.model, possibleActions, state)
+            game=self.games[gameId].toMove
+            possibleActions = self.gameEnv.getPossibleActions(game)
+            state = self.gameEnv.actionHistory(CPMLModelDef.hist_len, game)
+            action_probs = CPMLModelDef.get_action_probs(self.model, possibleActions, state)
             action = np.argmax(action_probs)
-            hand = env.game.getMoves()[action]
-
-            game.implementMove(aiMove)
+            move = game.getMoves()[action]
+            game.implementMove(move)
+            if game.done():
+                self.activeGames.remove(gameId)
         return True
     def getGameState(self, gameId):
         if gameId==self.nextGameId:
