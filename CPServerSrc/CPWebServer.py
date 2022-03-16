@@ -14,7 +14,7 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 
 def initGame():
     gm = CPGameManager(seed=os.getenv('CP_RANDOM_SEED'))
-    gm,.apiNewPlayer("Jizz Balswactch")
+    gm.apiNewPlayer("Jizz Balswactch")
     return gm
 
 gm=initGame()
