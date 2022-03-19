@@ -87,6 +87,14 @@ def apiGetGameState():
     except NoActiveGameException as nag:
         return f"NoActiveGameException(gameId={nag.gameId})", 400
 
+@app.route('/startaigame/', methods=['PUT'])
+@cross_origin()
+def startAIGame():
+    playedId=request.json['playerid']
+    app.logger.info(f"Started AI game with {playedId}")
+    return jsonify(gm.startAIGame(playerId))
+
+
 if __name__ == '__main__':
     host=os.getenv('CP_HOST')
     port=os.getenv('CP_PORT')
@@ -94,5 +102,4 @@ if __name__ == '__main__':
         host='0.0.0.0'
     if port==None:
         port=105
-    gm.newPlayer("Jizz Ballsnatch",True)
     app.run(host=host, port=port)

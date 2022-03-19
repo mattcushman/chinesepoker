@@ -43,7 +43,7 @@ class CPGameManager():
         self.seed=seed
         self.gameEnv=CPMLGameEnv.CPMLGameEnv(CPMLModelDef.num_players, CPMLModelDef.hist_len)
         self.model=keras.models.load_model("../CPTextGame/cpmlModel0")
-
+        self.aiPlayerId=self.newPlayer("Jizz Ballsnatch",True)
     def newPlayer(self, name, isAI=False):
         newPlayerId = self.nextPlayerId
         self.players[newPlayerId]=CPPlayer(newPlayerId, name, isAI=isAI)
@@ -79,6 +79,8 @@ class CPGameManager():
         self.games[id]=CPGame(players,seed=self.seed)
         self.activeGames.add(id)
         return id
+    def startAiGame(self,playerId):
+        return self.newGame([playerId, self.aiPlayerId])
     def implementMove(self, gameId, move):
         if gameId not in self.activeGames:
             raise NoActiveGame(gameId)
