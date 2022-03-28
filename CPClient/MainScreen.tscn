@@ -23,7 +23,8 @@ font_data = ExtResource( 3 )
 script = ExtResource( 1 )
 
 [node name="TextureRect" type="TextureRect" parent="."]
-margin_right = 1900.0
+margin_left = 0.442383
+margin_right = 1900.44
 margin_bottom = 770.0
 texture = ExtResource( 2 )
 stretch_mode = 3
@@ -36,10 +37,10 @@ margin_left = 375.611
 margin_top = 246.982
 margin_right = 919.611
 margin_bottom = 327.982
-custom_fonts/font = ExtResource( 4 )
 custom_colors/font_color = Color( 0, 0, 0, 1 )
 custom_colors/font_outline_modulate = Color( 0.952941, 0.913725, 0.913725, 1 )
 custom_colors/font_color_shadow = Color( 0, 0, 0, 1 )
+custom_fonts/font = ExtResource( 4 )
 text = "Ready People Liberation Army
 "
 align = 1
@@ -99,9 +100,9 @@ margin_left = 258.313
 margin_top = 19.6875
 margin_right = 1001.31
 margin_bottom = 140.688
-custom_fonts/font = SubResource( 3 )
 custom_colors/font_color = Color( 0, 0, 0, 1 )
 custom_colors/font_outline_modulate = Color( 0.117647, 0.576471, 0.121569, 1 )
+custom_fonts/font = SubResource( 3 )
 text = "Welcome to Chairman Matt's.
 ** Chinese Poker **
 
@@ -133,6 +134,18 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 
+[node name="MakeAIGameButton" type="Button" parent="."]
+margin_left = 378.877
+margin_top = 461.073
+margin_right = 466.877
+margin_bottom = 492.073
+text = "Play vrs AI"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="MakeAIGameHTTPRequest" type="HTTPRequest" parent="."]
+
 [connection signal="pressed" from="JoinGameButton" to="." method="_on_TextureButton_pressed"]
 [connection signal="request_completed" from="NewPlayerHTTPRequest" to="." method="_on_NewPlayerHTTPRequest_request_completed"]
 [connection signal="text_entered" from="NameInputField" to="." method="_on_NameInputField_text_entered"]
@@ -142,3 +155,5 @@ __meta__ = {
 [connection signal="timeout" from="TickTimer" to="." method="_on_TickTimer_timeout"]
 [connection signal="request_completed" from="GameStateHTTPRequest" to="." method="_on_GameStateHTTPRequest_request_completed"]
 [connection signal="request_completed" from="PlayerListHTTPRequest" to="." method="_on_PlayerListHTTPRequest_request_completed"]
+[connection signal="pressed" from="MakeAIGameButton" to="." method="_on_MakeAIGameButton_pressed"]
+[connection signal="request_completed" from="MakeAIGameHTTPRequest" to="." method="_on_MakeAIGame_request_completed"]

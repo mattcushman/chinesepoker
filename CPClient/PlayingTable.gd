@@ -8,6 +8,8 @@ var playerPositions=[]
 
 
 func _ready():
+	print("In ready of PlayingTable")
+
 	pass # Replace with function body.
 
 

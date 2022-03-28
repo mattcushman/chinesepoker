@@ -66,8 +66,8 @@ margin_left = 66.8402
 margin_top = 520.995
 margin_right = 396.84
 margin_bottom = 574.995
-custom_fonts/font = ExtResource( 4 )
 custom_colors/font_color = Color( 0, 0, 0, 1 )
+custom_fonts/font = ExtResource( 4 )
 text = "It's your move!"
 __meta__ = {
 "_edit_use_anchors_": false
@@ -78,10 +78,10 @@ margin_left = 174.722
 margin_top = 10.4226
 margin_right = 1013.72
 margin_bottom = 69.4226
-custom_fonts/font = ExtResource( 4 )
 custom_colors/font_color = Color( 0, 0, 0, 1 )
 custom_colors/font_outline_modulate = Color( 0.94902, 0.917647, 0.917647, 1 )
 custom_colors/font_color_shadow = Color( 0, 0.74902, 0.0823529, 0.772549 )
+custom_fonts/font = ExtResource( 4 )
 text = "Socialism with Chinese Characteristics"
 __meta__ = {
 "_edit_use_anchors_": false

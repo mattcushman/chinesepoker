@@ -2,6 +2,7 @@ from CPGame import CPGame
 from CPMLAgent import CPMLModelDef
 from CPMLAgent import CPMLGameEnv
 from tensorflow import keras
+import numpy as np
 
 class NoActiveGame(Exception):
     def __init__(self, gameId):
@@ -51,8 +52,8 @@ class CPGameManager():
         return newPlayerId
     def getPlayerId(self, name):
         playerId=False
-        for pId,pName in self.players.items():
-            if name==pName[0]:
+        for pId,player in self.players.items():
+            if name==player.name:
                 playerId=pId
         return playerId
 
@@ -80,26 +81,34 @@ class CPGameManager():
         self.activeGames.add(id)
         return id
     def startAiGame(self,playerId):
-        return self.newGame([playerId, self.aiPlayerId])
+        if len(self.pendingGame)==0:
+            gameId=self.joinNextGame(playerId)
+            self.joinNextGame(self.aiPlayerId)
+            self.makeReady(playerId)
+            self.makeReady(self.aiPlayerId)
+            self.runAIs(gameId)
+            return gameId
+        else:
+            return -1
     def implementMove(self, gameId, move):
         if gameId not in self.activeGames:
             raise NoActiveGame(gameId)
         game=self.games[gameId]
         if not game.implementMove(move):
             raise InvalidMove(gameId, move)
+        self.runAIs(gameId)
         if game.done():
             self.activeGames.remove(gameId)
+        return 1
     def runAIs(self, gameId):
-        while self.players[self.games[gameId].toMove].isAI:
-            game=self.games[gameId].toMove
+        game = self.games[gameId]
+        while not game.done() and self.players[game.toMove].isAI:
             possibleActions = self.gameEnv.getPossibleActions(game)
             state = self.gameEnv.actionHistory(CPMLModelDef.hist_len, game)
             action_probs = CPMLModelDef.get_action_probs(self.model, possibleActions, state)
             action = np.argmax(action_probs)
             move = game.getMoves()[action]
             game.implementMove(move)
-            if game.done():
-                self.activeGames.remove(gameId)
         return True
     def getGameState(self, gameId):
         if gameId==self.nextGameId:

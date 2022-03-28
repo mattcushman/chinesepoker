@@ -84,15 +84,15 @@ def apiGetGameState():
     try:
         gameId=int(request.json['gameid'])
         return jsonify(gm.getGameState(gameId)), 200
-    except NoActiveGameException as nag:
+    except NoActiveGame as nag:
         return f"NoActiveGameException(gameId={nag.gameId})", 400
 
 @app.route('/startaigame/', methods=['PUT'])
 @cross_origin()
 def startAIGame():
-    playedId=request.json['playerid']
-    app.logger.info(f"Started AI game with {playedId}")
-    return jsonify(gm.startAIGame(playerId))
+    playerId=request.json['playerid']
+    app.logger.info(f"Started AI game with {playerId}")
+    return jsonify(gm.startAiGame(playerId))
 
 
 if __name__ == '__main__':

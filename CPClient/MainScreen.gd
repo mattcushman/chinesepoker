@@ -20,7 +20,7 @@ func _on_TextureButton_pressed():
 func _on_NewPlayerHTTPRequest_request_completed(result, response_code, headers, body):
 	var json = JSON.parse(body.get_string_from_utf8())
 	print(json.result)
-	GameManager.playerId=int(json.result)
+	GameManager.playerId=json.result
 
 func _on_NameInputField_text_entered(new_text):
 	var msg = JSON.print({"name":new_text})
@@ -57,7 +57,7 @@ func _on_TickTimer_timeout():
 func _on_GameStateHTTPRequest_request_completed(result, response_code, headers, body):
 	var json = JSON.parse(body.get_string_from_utf8())
 	print("GameStateHTTPRequest completed", json.result)
-	if "active" in json.result and json.result["active"]:
+	if json.result and "active" in json.result and json.result["active"]:
 		print("Activating playing table.")
 		get_tree().change_scene("res://PlayingTable.tscn")
 
@@ -79,3 +79,18 @@ func _on_PlayerListHTTPRequest_request_completed(result, response_code, headers,
 		name = name + " " + str(activeGames)
 		$PlayerList.add_item(name)
 			
+
+
+func _on_MakeAIGameButton_pressed():
+	print("Pressed Make AI Game")
+	var msg = JSON.print({"playerid":GameManager.playerId})
+	print(msg)
+	var result=$MakeAIGameHTTPRequest.request(GameManager.url+"/startaigame/", GameManager.headers, false, HTTPClient.METHOD_PUT, msg)
+	print(result)
+
+func _on_MakeAIGame_request_completed(result, response_code, headers, body):
+	var json = JSON.parse(body.get_string_from_utf8())
+	print("MakeAIGame return ", json.result)
+	GameManager.myGameId=int(json.result)
+
+

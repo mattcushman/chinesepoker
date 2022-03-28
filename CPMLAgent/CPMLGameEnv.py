@@ -38,9 +38,12 @@ class CPMLGameEnv(object):
     def actionHistory(self, n, game=False):
         if not game:
             game=self.game
-        if self.histLen > 0:
-            return [self.cardsToVector(game.hands[game.toMove])] + self.playHist[:n] + [self.cardsToVector([]) for k in range(n-len(self.playHist))]
+            playHist=self.playHist
         else:
-            return [self.cardsToVector(game.hands[game.toMove])] + self.playHist[:n]
+            playHist=[self.cardsToVector(c) for (p,c) in reversed(game.playerMoves)]
+        if self.histLen > 0:
+            return [self.cardsToVector(game.hands[game.toMove])] + playHist[:n] + [self.cardsToVector([]) for k in range(n-len(playHist))]
+        else:
+            return [self.cardsToVector(game.hands[game.toMove])] + playHist[:n]
 
 
