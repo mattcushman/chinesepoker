@@ -5,8 +5,6 @@ func _ready():
 	GameManager.myGameId=-1
 	$JoinGameButton.disabled=true
 	if GameManager.playerId>=0:
-		$NameInputField.set_text(GameManager.playerName)
-		$NameInputField.editable=true
 		$JoinGameButton.disabled=false
 	$MakeReadyButton.disabled=true
 
@@ -21,14 +19,6 @@ func _on_NewPlayerHTTPRequest_request_completed(result, response_code, headers, 
 	var json = JSON.parse(body.get_string_from_utf8())
 	print(json.result)
 	GameManager.playerId=json.result
-
-func _on_NameInputField_text_entered(new_text):
-	var msg = JSON.print({"name":new_text})
-	GameManager.playerName=new_text
-	print(msg)
-	print($NewPlayerHTTPRequest.request(GameManager.url+"/newplayer/", GameManager.headers, false, HTTPClient.METHOD_POST, msg))
-	$NameInputField.set_editable(false)
-	$JoinGameButton.disabled=false
 
 func _on_JoinGameHTTPRequest_request_completed(result, response_code, headers, body):
 	var json = JSON.parse(body.get_string_from_utf8())
@@ -69,13 +59,16 @@ func _on_PlayerListHTTPRequest_request_completed(result, response_code, headers,
 		var name = p[0]
 		var inPending = p[1]
 		var isReady = p[2]
-		var activeGames = p[3]
+		var isAI = p[3]
+		var activeGames = p[4]
 		if isReady==1:
 			name = ' *  '+name
 		elif inPending==1:
 			name = ' +  '+name
 		else:
 			name = '    '+name
+		if isAI==1:
+			name = name + " (AI) "
 		name = name + " " + str(activeGames)
 		$PlayerList.add_item(name)
 			
@@ -83,9 +76,9 @@ func _on_PlayerListHTTPRequest_request_completed(result, response_code, headers,
 
 func _on_MakeAIGameButton_pressed():
 	print("Pressed Make AI Game")
-	var msg = JSON.print({"playerid":GameManager.playerId})
+	var msg = JSON.print({"playerid":GameManager.playerId, "token":GameManager.token})
 	print(msg)
-	var result=$MakeAIGameHTTPRequest.request(GameManager.url+"/startaigame/", GameManager.headers, false, HTTPClient.METHOD_PUT, msg)
+	var result=$MakeAIGameHTTPRequest.request(GameManager.url+"/startaigame/", GameManager.headers, false, HTTPClient.METHOD_POST, msg)
 	print(result)
 
 func _on_MakeAIGame_request_completed(result, response_code, headers, body):

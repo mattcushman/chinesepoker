@@ -28,9 +28,6 @@ margin_right = 1900.44
 margin_bottom = 770.0
 texture = ExtResource( 2 )
 stretch_mode = 3
-__meta__ = {
-"_edit_use_anchors_": false
-}
 
 [node name="ReadyListLabel" type="Label" parent="."]
 margin_left = 375.611
@@ -60,18 +57,6 @@ __meta__ = {
 }
 
 [node name="NewPlayerHTTPRequest" type="HTTPRequest" parent="."]
-
-[node name="NameInputField" type="LineEdit" parent="."]
-margin_left = 557.0
-margin_top = 195.0
-margin_right = 157.912
-margin_bottom = 141.6
-rect_min_size = Vector2( 100, 10 )
-rect_clip_content = true
-max_length = 32
-__meta__ = {
-"_edit_use_anchors_": false
-}
 
 [node name="JoinGameHTTPRequest" type="HTTPRequest" parent="."]
 
@@ -117,22 +102,6 @@ margin_left = 558.646
 margin_top = 317.742
 margin_right = 743.646
 margin_bottom = 453.742
-__meta__ = {
-"_edit_use_anchors_": false
-}
-
-[node name="NameEnterLabel" type="Label" parent="."]
-margin_left = 428.464
-margin_top = 197.096
-margin_right = 538.464
-margin_bottom = 211.096
-custom_colors/font_color = Color( 0, 0, 0, 1 )
-custom_colors/font_outline_modulate = Color( 0, 0, 0, 1 )
-custom_colors/font_color_shadow = Color( 0, 0, 0, 1 )
-text = "Enter name here:"
-__meta__ = {
-"_edit_use_anchors_": false
-}
 
 [node name="MakeAIGameButton" type="Button" parent="."]
 margin_left = 378.877
@@ -148,7 +117,6 @@ __meta__ = {
 
 [connection signal="pressed" from="JoinGameButton" to="." method="_on_TextureButton_pressed"]
 [connection signal="request_completed" from="NewPlayerHTTPRequest" to="." method="_on_NewPlayerHTTPRequest_request_completed"]
-[connection signal="text_entered" from="NameInputField" to="." method="_on_NameInputField_text_entered"]
 [connection signal="request_completed" from="JoinGameHTTPRequest" to="." method="_on_JoinGameHTTPRequest_request_completed"]
 [connection signal="pressed" from="MakeReadyButton" to="." method="_on_MakeReadyButton_pressed"]
 [connection signal="request_completed" from="MakeReadyHTTPRequest" to="." method="_on_MakeReadyHTTPRequest_request_completed"]

@@ -18,6 +18,16 @@ def initGame():
 
 gm=initGame()
 
+def validateRequest(request):
+    if not request.json or 'playerid' not in request.json:
+        app.logger.error(f"Invalid or missing playerid...")
+    playerToken = gm.getPlayersToken(int(request.json['playerid']))
+    if not request.json or 'token' not in request.json:
+        app.logger.error(f"Missing token...")
+    if request.json['token'] != playerToken:
+        app.logger.error(f'Invalid token... {playerToken} versus {request.json["token"]}')
+    return int(request.json['playerid'])
+
 @app.route('/newplayer/', methods=['POST'])
 @cross_origin()
 def apiNewPlayer():
@@ -25,9 +35,23 @@ def apiNewPlayer():
         return "Could not parse newplayer", 400
     playerId = gm.getPlayerId(request.json['name'])
     if not playerId:
-        playerId=gm.newPlayer(request.json['name'])
+        playerId=gm.newPlayer(request.json['name'], request.json['password'])
         app.logger.info(f"Created newplayer {playerId} {request.json['name']}")
-    return jsonify(playerId), 201
+        return jsonify(playerId), 201
+    else:
+        return "Player exists", 400
+
+@app.route('/login/', methods=['POST'])
+@cross_origin()
+def apiLogin():
+    if not request.json or not 'name' in request.json or not 'password' in request.json:
+        return "Could not parse login", 400
+    playerId,token = gm.login(request.json['name'],request.json['password'])
+    if playerId:
+        app.logger.info(f"login successful {playerId} {request.json['name']}")
+        return jsonify({'playerid':playerId, 'token':token}), 201
+    else:
+        return f"Player {request.json['name']} does not exist", 400
 
 @app.route('/playerstats/', methods=['POST'])
 @cross_origin()
@@ -35,10 +59,13 @@ def apiPlayerStats():
     playerStats=gm.playerStats()
     return jsonify(playerStats), 201
 
-@app.route('/joinnextgame/', methods=['PUT'])
+app.route('/joinnextgame/', methods=['PUT'])
 @cross_origin()
 def apiJoinNextyGame():
-    playerId=request.json['playerid']
+    try:
+        playerId=validateRequest(request)
+    except:
+        return "Invalid response", 400
     try:
         joinGame=gm.joinNextGame(playerId)
     except JoinGameError as jge:
@@ -51,18 +78,30 @@ def apiJoinNextyGame():
 @app.route('/makeready/', methods=['PUT'])
 @cross_origin()
 def apiMakeReady():
-    playerId=request.json['playerid']
+    try:
+        playerId=validateRequest(request)
+    except:
+        return "Invalid response", 400
     return jsonify(gm.makeReady(playerId))
 
 
 @app.route('/implementmove/', methods=['PUT'])
 @cross_origin()
 def apiImplementMove():
-    if not request.json or not 'gameid' in request.json or not 'move' in request.json:
-        return "Not formatted correctly", 400
     try:
-        gameId=int(request.json['gameid'])
+        playerId=validateRequest(request)
+    except:
+        app.logger.error(f"Invalid Response {merr.move} {merr.msg}")
+        return "Invalid response", 400
+    try:
+        app.logger.info(f"playerId={playerId}")
+        playerActiveGames=gm.getActiveGameByPlayer(playerId)
+        if len(playerActiveGames)!=1:
+            app.logger.error(f"PlayerActiveGames={playerActiveGames}")
+        gameId=playerActiveGames[0]
+        app.logger.info(f"gameId=[{gameId}]")
         move=list(request.json['move'])
+        app.logger.info(f"Move={move}")
         return jsonify(gm.implementMove(gameId,move)), 200
     except MoveError as merr:
         app.logger.error(f"MoveError {merr.move} {merr.msg}")
@@ -74,6 +113,7 @@ def apiImplementMove():
         app.logger.error(f"NoActiveGame(gameId={nag.gameId})")
         return f"NoActiveGameException(gameId={gameId})", 400
     except:
+        app.logger.error(f"Other Error")
         return "Other Error", 400
 
 @app.route('/getgamestate/', methods=['POST'])
@@ -87,10 +127,13 @@ def apiGetGameState():
     except NoActiveGame as nag:
         return f"NoActiveGameException(gameId={nag.gameId})", 400
 
-@app.route('/startaigame/', methods=['PUT'])
+@app.route('/startaigame/', methods=['POST'])
 @cross_origin()
 def startAIGame():
-    playerId=request.json['playerid']
+    try:
+        playerId=validateRequest(request)
+    except:
+        return "Invalid response", 400
     app.logger.info(f"Started AI game with {playerId}")
     return jsonify(gm.startAiGame(playerId))
 

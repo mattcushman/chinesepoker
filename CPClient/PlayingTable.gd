@@ -87,14 +87,14 @@ func _on_Button_pressed():
 		if card.get_state()==1:
 			cardsToPlay.append(card)
 			ranksToPlay.append(card.rank())
-	var msg=JSON.print({"gameid":GameManager.myGameId, "move":ranksToPlay})
+	var msg=JSON.print({"gameid":GameManager.myGameId, "move":ranksToPlay, 'playerid':GameManager.playerId, 'token':GameManager.token})
 	print(msg)
 	$PlayHandHTTPRequest.request(GameManager.url+"/implementmove/", GameManager.headers, false, HTTPClient.METHOD_PUT, msg)
 
 
 func _on_PlayHandHTTPRequest_request_completed(result, response_code, headers, body):
 	var json = JSON.parse(body.get_string_from_utf8())
-	print("PlayHandHTTPRequest completed", json.result)
+	print("PlayHandHTTPRequest completed ", json.result)
 	if json.result:
 		print("Removing cards from list")
 		for c in cardsToPlay:
