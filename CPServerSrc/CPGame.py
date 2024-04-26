@@ -51,11 +51,14 @@ def subsets(k, l):
     return [list(x) for x in itertools.combinations(l,k)]
 
 class CPGame():
-    def __init__(self, players,seed=False):
+    def __init__(self, players,seed=False,deck=None):
         if seed:
             np.random.seed(seed)
         self.players=players
-        self.deck=[int(x) for x in np.random.permutation(52)]
+        if deck is None:
+            self.deck=[int(x) for x in np.random.permutation(52)]
+        else:
+            self.deck=deck
         self.hands={}
         for i,playerId in enumerate(players):
             self.hands[playerId]=set(self.deck[13*i:13*i+13])
