@@ -58,6 +58,7 @@ class CPMLTorchEnv(EnvBase):
         
     def _step(self, tensordict):
         action = tensordict["action"]
+        print("Action: ", action)
         reward = torch.zeros(self.batch_size, dtype=torch.float32)
         done = torch.zeros(self.batch_size, dtype=torch.bool)
         hand = torch.zeros(self.batch_size + ( 52, ), dtype=torch.bool)
@@ -109,12 +110,42 @@ class CPMLTorchEnv(EnvBase):
             "player": DiscreteTensorSpec(num_players),
             "actionhistory": BinaryDiscreteTensorSpec(52, shape=(hist_len, 52), dtype=torch.bool)
         })
-        self.action_spec = BinaryDiscreteTensorSpec(52)
+        self.action_spec = BinaryDiscreteTensorSpec(52, dtype=torch.bool)
         self.reward_spec = BoundedTensorSpec(low=0.0, high=1.0, shape=(1,), dtype=torch.float32)
 
     def _set_seed(self, seed):
         rng = torch.manual_seed(seed)
         self.rng = rng
+
+    def rand_action(self, tensordict: TensorDictBase | None = None) -> TensorDictBase:
+        if tensordict is not None:
+            shape = tensordict.shape
+        elif not self.batch_size:
+            shape = torch.Size([])
+        elif tensordict.shape != self.batch_size:
+            # if tensordict is not None and the env has a batch size, their shape must match
+            raise RuntimeError(
+                "The input tensordict and the env have a different batch size: "
+                f"env.batch_size={self.batch_size} and tensordict.batch_size={tensordict.shape}. "
+                f"Non batch-locked environment require the env batch-size to be either empty or to"
+                f" match the tensordict one."
+            )
+        moves = []
+        for i in range(self.total_batch_size()):
+            game = self.games[i]
+            game_moves = game.getMoves()
+            game_move = game_moves[np.random.randint(len(game_moves))]
+            moves.append([bool(i in game_move) for i in range(52)])
+        if len(self.batch_size) == 0:
+            r = TensorDict({"action": torch.tensor(moves[0], dtype=torch.bool)}, 
+                               batch_size=self.batch_size)
+        else:
+            r = TensorDict({"action": torch.tensor(moves, dtype=torch.bool)}, batch_size=self.batch_size)
+        if tensordict is None:
+            return r
+        tensordict.update(r)
+        return tensordict
+            
 
     def total_batch_size(self):
         total_batch_size = 1

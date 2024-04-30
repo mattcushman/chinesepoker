@@ -3,3 +3,4 @@ __pycache__/
 .conda/
 .vscode/
 .conda/bin/2to3
+.pytest_cache/
