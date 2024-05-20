@@ -69,8 +69,19 @@ class CPGame():
     def cardToString(self, c):
         return ranks[c // 4] + suits[c % 4]
 
+    def reward(self, player_name):
+        if self.winner == -1:
+            return 0
+        elif self.winner == player_name:
+            return 1
+        else:
+            return -1 
+
     def cardsToString(self, cards):
         return "-".join([self.cardToString(c) for c in sorted(cards)])
+    
+    def to_move_index(self):
+        return self.players.index(self.toMove)
 
     def implementMove(self, move):
         if not all(c in self.hands[self.toMove] for c in move):
@@ -128,7 +139,9 @@ class CPGame():
             moves = moves + subsets(5, cardsOfSuit)
         return moves
 
-    def getMoves(self):
+    def getMoves(self, player=None):
+        if player is not None and player!=self.toMove:
+            return []
         allMoves = self.allMoves(self.hands[self.toMove])
         if len(self.playerMoves)==0:
             c=min(self.hands[self.toMove])

@@ -5,19 +5,27 @@ import torch
 from tensordict import TensorDict, TensorDictBase
 from tensordict.nn import TensorDictModule
 from torch import nn
+import torch.nn.functional as fun
 
 from torchrl.data import (
     BoundedTensorSpec, 
     CompositeSpec, 
-    UnboundedContinuousTensorSpec,
     BinaryDiscreteTensorSpec,
-    DiscreteTensorSpec
+    DiscreteTensorSpec,
+    OneHotDiscreteTensorSpec
 )
 from torchrl.envs import CatTensors, EnvBase, Transform, TransformedEnv, UnsqueezeTransform
 
 
+def pad_list(l, length):
+    if len(l) >= length:
+        raise ValueError("Available moves is longer than length")
+    return l + [[] for _ in range(length - len(l))]
+
 class CPMLTorchEnv(EnvBase):
     batch_locked = False
+    AVAILABLE_ACTIONS_LEN = 64
+
     def __init__(self, num_players=2, hist_len=64, seed=None, device="cpu", batch_size=[]):
         if len(batch_size) > 1:
             raise ValueError("CPMLTorchEnv does not support multidim batch_size > 1")
@@ -25,7 +33,7 @@ class CPMLTorchEnv(EnvBase):
         self._make_spec(num_players, hist_len)
         self.num_players = num_players
         self.hist_len = hist_len
-        self.action_history = torch.zeros(self.total_batch_size(), hist_len, 52, dtype=torch.bool)
+        self.action_history = torch.zeros(self.total_batch_size(), hist_len, 52, dtype=torch.int64)
         if seed is None:
             seed = torch.empty((), dtype=torch.int64).random_().item()
         self.set_seed(seed)
@@ -34,83 +42,96 @@ class CPMLTorchEnv(EnvBase):
         self.games = [CPGame.CPGame(list(range(self.num_players)),
                       deck=torch.randperm(52, generator=self.rng).tolist()) for _ in range(self.total_batch_size())]
         if len(self.batch_size) == 0:
-            self.action_history = torch.zeros(self.hist_len, 52, dtype=torch.bool)
+            self.action_history = torch.zeros(self.hist_len, 52, dtype=torch.int64)
             game = self.games[0]
+            self.available_actions = torch.tensor([[[c in move for c in range(52)] 
+                                                   for move in pad_list(game.getMoves(), 
+                                                                        self.AVAILABLE_ACTIONS_LEN)]], 
+                                                   dtype=torch.int64)
             return TensorDict({
-                "reward": torch.tensor(0.0, dtype=torch.float32),
+                "reward": torch.tensor(0.0, dtype=torch.float),
                 "done": torch.tensor(False, dtype=torch.bool),
-                "hand": torch.tensor([c in game.hands[game.toMove] for c in range(52)], dtype=torch.bool),
+                "hand": torch.tensor([c in game.hands[game.toMove] for c in range(52)], dtype=torch.int64),
                 "tomove": torch.tensor(game.toMove, dtype=torch.int64),
-                "player": torch.tensor(game.toMove, dtype=torch.int64),
+                "available_actions": self.available_actions_value(),
                 "actionhistory": self.action_history,
             }, batch_size=self.batch_size,)
         else:
             self.action_history = torch.zeros(self.total_batch_size(), self.hist_len, 52, dtype=torch.float32)
+            self.available_actions = torch.tensor([[[c in move for c in range(52)] 
+                                                    for move in pad_list(game.getMoves(), 
+                                                                         self.AVAILABLE_ACTIONS_LEN)]
+                                                    for game in self.games], 
+                                                    dtype=torch.int64)
             return TensorDict({
-                "reward": torch.tensor([0.0 for game in self.games], dtype=torch.float32),
+                "reward": torch.tensor([0.0 for game in self.games], dtype=torch.float),
                 "done": torch.tensor([False for game in self.games], dtype=torch.bool),
                 "hand": torch.tensor([[c in game.hands[game.toMove] for c in range(52)]
-                                    for game in self.games], dtype=torch.bool),
+                                    for game in self.games], dtype=torch.int64),
                 "tomove": torch.tensor([game.toMove for game in self.games], dtype=torch.int64),
-                "player": torch.tensor([game.toMove for game in self.games], dtype=torch.int64),
+                "available_actions": self.available_actions_value(),
                 "actionhistory": self.action_history,
             }, batch_size=self.batch_size,)
         
     def _step(self, tensordict):
         action = tensordict["action"]
-        print("Action: ", action)
-        reward = torch.zeros(self.batch_size, dtype=torch.float32)
+        if len(self.batch_size) == 0:
+            action_index = torch.argmax(action)
+        else:
+            action_index = torch.argmax(action, dim=1)
+        reward = torch.zeros(self.batch_size, dtype=torch.float)
         done = torch.zeros(self.batch_size, dtype=torch.bool)
-        hand = torch.zeros(self.batch_size + ( 52, ), dtype=torch.bool)
+        hand = torch.zeros(self.batch_size + ( 52, ), dtype=torch.int64)
         tomove = torch.zeros(self.batch_size, dtype=torch.int64)
-        player = torch.zeros(self.batch_size, dtype=torch.int64)
         for i in range(self.total_batch_size()):
             game = self.games[i]
             this_player=game.toMove
             if len(self.batch_size) == 0:
-                this_action = action
+                this_action_index = action_index
             else:
-                this_action = action[i]
+                this_action_index = action_index[i]
+            deck_action = self.available_actions[i][this_action_index]
             try:
-                game.implementMove([c for c in range(52) if this_action[c]])
+                game.implementMove([c for c in range(52) if deck_action[c]])
             except CPGame.MoveError as move_error:
                 print(f"Move error: {move_error.move} {move_error.msg}")
             if len(self.batch_size) == 0:
-                torch.roll(self.action_history, 1, 0)
-                self.action_history[0,:] = this_action
+                self.action_history = torch.roll(self.action_history, 1, 0)
+                self.action_history[0,:] = deck_action
             else:
-                torch.roll(self.action_history, 1, 1)
-                self.action_history[i,0,:] = this_action
+                self.action_history = torch.roll(self.action_history, 1, 1)
+                self.action_history[i,0,:] = deck_action
             if len(self.batch_size) == 0:
                 reward = torch.tensor(float(game.winner == this_player))
                 done = torch.tensor(game.done())
-                hand = torch.tensor([c in game.hands[this_player] for c in range(52)], dtype=torch.bool)
+                hand = torch.tensor([c in game.hands[this_player] for c in range(52)], dtype=torch.int64)
                 tomove = torch.tensor(game.toMove)
-                player = torch.tensor(this_player)
             else:
                 reward[i] = float(game.winner == this_player)
                 done[i] = game.done()
-                hand[i,:] = torch.tensor([c in game.hands[this_player] for c in range(52)], dtype=torch.bool)
+                hand[i,:] = torch.tensor([c in game.hands[this_player] for c in range(52)], dtype=torch.int64)
                 tomove[i] = game.toMove
-                player[i] = this_player
+            self.available_actions[i] = torch.tensor([[c in move for c in range(52)] 
+                                                for move in pad_list(game.getMoves(), self.AVAILABLE_ACTIONS_LEN)], 
+                                                dtype=torch.int64)
         out = TensorDict({
             "reward": reward,
             "done": done,
             "hand": hand,
             "tomove": tomove,
-            "player": player,
             "actionhistory": self.action_history,
+            "available_actions": self.available_actions_value(),
         }, batch_size=self.batch_size,)
         return out
     
     def _make_spec(self, num_players, hist_len):
         self.observation_spec = CompositeSpec({
-            "hand": BinaryDiscreteTensorSpec(52, dtype=torch.bool),
+            "hand": BinaryDiscreteTensorSpec(52, dtype=torch.int64),
             "tomove": DiscreteTensorSpec(num_players),
-            "player": DiscreteTensorSpec(num_players),
-            "actionhistory": BinaryDiscreteTensorSpec(52, shape=(hist_len, 52), dtype=torch.bool)
+            "available_actions": BinaryDiscreteTensorSpec(52, shape=(self.AVAILABLE_ACTIONS_LEN, 52), dtype=torch.int64),
+            "actionhistory": BinaryDiscreteTensorSpec(52, shape=(hist_len, 52), dtype=torch.int64)
         })
-        self.action_spec = BinaryDiscreteTensorSpec(52, dtype=torch.bool)
+        self.action_spec = OneHotDiscreteTensorSpec(self.AVAILABLE_ACTIONS_LEN, dtype=torch.int64)
         self.reward_spec = BoundedTensorSpec(low=0.0, high=1.0, shape=(1,), dtype=torch.float32)
 
     def _set_seed(self, seed):
@@ -130,22 +151,23 @@ class CPMLTorchEnv(EnvBase):
                 f"Non batch-locked environment require the env batch-size to be either empty or to"
                 f" match the tensordict one."
             )
-        moves = []
-        for i in range(self.total_batch_size()):
-            game = self.games[i]
-            game_moves = game.getMoves()
-            game_move = game_moves[np.random.randint(len(game_moves))]
-            moves.append([bool(i in game_move) for i in range(52)])
+        moves = [np.random.randint(len(game.getMoves())) for game in self.games]
         if len(self.batch_size) == 0:
-            r = TensorDict({"action": torch.tensor(moves[0], dtype=torch.bool)}, 
+            r = TensorDict({"action": fun.one_hot(torch.tensor(moves[0]), num_classes=self.AVAILABLE_ACTIONS_LEN)}, 
                                batch_size=self.batch_size)
         else:
-            r = TensorDict({"action": torch.tensor(moves, dtype=torch.bool)}, batch_size=self.batch_size)
+            r = TensorDict({"action": fun.one_hot(torch.tensor(moves), num_classes=self.AVAILABLE_ACTIONS_LEN)}, 
+                           batch_size=self.batch_size)
         if tensordict is None:
             return r
         tensordict.update(r)
         return tensordict
             
+    def available_actions_value(self):
+        if len(self.batch_size) == 0:
+            return self.available_actions[0]
+        else:
+            return self.available_actions
 
     def total_batch_size(self):
         total_batch_size = 1
