@@ -9,6 +9,11 @@ from tensordict import TensorDict
 from TorchAgent.CPMLTorchEnv import CPMLTorchEnv
 from TorchAgent.CPMLTorchMarlEnv import CPMLTorchMarlEnv
 
+def make_marl_action(action_dict, action_len):
+    return TensorDict({(agent_name, "action"): fun.one_hot(torch.tensor(action), action_len) 
+                       for agent_name, action in action_dict.items()},
+                       batch_size=[1])
+
 def test_CPMLTorchEnv():
     torch_env = CPMLTorchEnv(seed=1)
     assert torch_env.num_players == 2
@@ -97,3 +102,84 @@ def test_check_env_specs_marl():
     torch_env = CPMLTorchMarlEnv(seed=1)
     torch_env.reset()
     check_env_specs(torch_env)
+
+def test_output_specs_marl():
+    torch_env = CPMLTorchMarlEnv(num_envs=10, seed=1)
+    torch_env.reset()
+    print("action_spec:", torch_env.full_action_spec)
+    print("reward_spec:", torch_env.full_reward_spec)
+    print("done_spec:", torch_env.full_done_spec)
+    print("observation_spec:", torch_env.observation_spec)
+    assert 0==0
+
+def test_CPMLTorchMarlEnv_reset():
+    torch_env = CPMLTorchMarlEnv(seed=1)
+    obs = torch_env.reset()
+    assert torch_env.games is not None
+    assert torch_env.games[0].toMove == 'player_0'
+
+def test_CPMLTorchMarlEnv_step():
+    torch_env = CPMLTorchMarlEnv(seed=2)
+    obs = torch_env.reset()
+    assert torch_env.games[0].toMove == 'player_1'
+    assert len(torch_env.games[0].hands['player_1']) == 13
+    assert len(torch_env.games[0].getMoves()) == 3
+    torch_env.step(make_marl_action({"player_0": 0, "player_1": 0}, CPMLTorchMarlEnv.AVAILABLE_ACTIONS_LEN)) 
+    assert torch_env.games[0].toMove == 'player_0'
+    assert len(torch_env.games[0].getMoves()) == 14
+    torch_env.step(TensorDict({"action": fun.one_hot(torch.tensor(2), CPMLTorchMarlEnv.AVAILABLE_ACTIONS_LEN)},  
+                             batch_size=[])) 
+    assert torch_env.games[0].toMove == 'player_1'
+    assert len(torch_env.games[0].getMoves()) == 12
+
+def test_CMPLtorch_env_rollout_marl():
+    torch_env = CPMLTorchMarlEnv(seed=3)
+    obs = torch_env.reset()
+    assert torch_env.games[0].toMove == 1
+    obs = torch_env.rollout(5)
+    assert torch_env.games[0].toMove == 0
+    action_history_1 = torch_env.action_history.numpy()
+    obs = torch_env.rollout(5)
+    assert torch_env.games[0].toMove == 1
+    action_history_2 = torch_env.action_history.numpy()
+    for i in range(5):
+        assert (action_history_1[0,i] == action_history_2[0,5+i]).all()
+    obs = torch_env.rollout(10)
+    action_history_3 = torch_env.action_history.numpy()
+    for i in range(10):
+        assert (action_history_2[0,i] == action_history_3[0,10+i]).all()
+
+def test_CMPLtorch_env_fullgame_marl():
+    torch_env = CPMLTorchMarlEnv(seed=4)
+    obs = torch_env.reset()
+    while not torch_env.games[0].done():
+        print("*"*80)
+        print(torch_env.games[0].prettyState())
+        actions_list = torch_env.games[0].getMoves()
+        action_lengths = [len(move) for move in actions_list]
+        action_index = action_lengths.index(max(action_lengths))
+        for i, move in enumerate(actions_list):
+            print(f"{i}: {torch_env.games[0].cardsToString(move)}")
+        print(f"action index = {action_index}")
+        print(f"action = {actions_list[action_index]}")
+        obs = torch_env.step(TensorDict({"action": fun.one_hot(torch.tensor(action_index), 
+                                                              CPMLTorchMarlEnv.AVAILABLE_ACTIONS_LEN)},  
+                             batch_size=[]))
+        
+def test_CMPLtorch_env_fullgame_hardcode_marl():
+    move_to_make = [0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 8, 1, 1, 1, 0, 5, 0, 0, 0, 0, 0, 0]
+    torch_env = CPMLTorchMarlEnv(seed=4)
+    obs = torch_env.reset()
+    for move_number,move_index in enumerate(move_to_make):
+        assert not torch_env.games[0].done()
+        obs = torch_env.step(TensorDict({"action": fun.one_hot(torch.tensor(move_index), 
+                                                              CPMLTorchMarlEnv.AVAILABLE_ACTIONS_LEN)},  
+                             batch_size=[]))
+        if move_number < len(move_to_make)-1:
+            assert obs["next"]["done"] == False
+            assert obs["next"]["reward"] == torch.tensor(0.0)
+    assert torch_env.games[0].done()
+    assert torch_env.games[0].winner == 0
+    assert torch_env.games[0].toMove == 1
+    assert obs["next"]["done"] == True
+    assert obs["next"]["reward"] == torch.tensor(+1.0)

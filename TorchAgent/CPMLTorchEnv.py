@@ -49,7 +49,6 @@ class CPMLTorchEnv(EnvBase):
                                                                         self.AVAILABLE_ACTIONS_LEN)]], 
                                                    dtype=torch.int64)
             return TensorDict({
-                "reward": torch.tensor(0.0, dtype=torch.float),
                 "done": torch.tensor(False, dtype=torch.bool),
                 "hand": torch.tensor([c in game.hands[game.toMove] for c in range(52)], dtype=torch.int64),
                 "tomove": torch.tensor(game.toMove, dtype=torch.int64),
@@ -64,7 +63,6 @@ class CPMLTorchEnv(EnvBase):
                                                     for game in self.games], 
                                                     dtype=torch.int64)
             return TensorDict({
-                "reward": torch.tensor([0.0 for game in self.games], dtype=torch.float),
                 "done": torch.tensor([False for game in self.games], dtype=torch.bool),
                 "hand": torch.tensor([[c in game.hands[game.toMove] for c in range(52)]
                                     for game in self.games], dtype=torch.int64),
@@ -131,8 +129,12 @@ class CPMLTorchEnv(EnvBase):
             "available_actions": BinaryDiscreteTensorSpec(52, shape=(self.AVAILABLE_ACTIONS_LEN, 52), dtype=torch.int64),
             "actionhistory": BinaryDiscreteTensorSpec(52, shape=(hist_len, 52), dtype=torch.int64)
         })
-        self.action_spec = OneHotDiscreteTensorSpec(self.AVAILABLE_ACTIONS_LEN, dtype=torch.int64)
-        self.reward_spec = BoundedTensorSpec(low=0.0, high=1.0, shape=(1,), dtype=torch.float32)
+        self.action_spec = CompositeSpec({
+            "action": OneHotDiscreteTensorSpec(self.AVAILABLE_ACTIONS_LEN, dtype=torch.int64)
+        })
+        self.reward_spec = CompositeSpec({
+            "reward": BoundedTensorSpec(low=0.0, high=1.0, shape=(1,), dtype=torch.float32)
+        })
 
     def _set_seed(self, seed):
         rng = torch.manual_seed(seed)

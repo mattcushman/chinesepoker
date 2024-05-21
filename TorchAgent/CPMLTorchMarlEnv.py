@@ -18,7 +18,6 @@ from torchrl.data import (
 from torchrl.envs import CatTensors, EnvBase, Transform, TransformedEnv, UnsqueezeTransform
 from torchrl.envs.utils import check_marl_grouping
 
-
 def pad_list(l, length):
     if len(l) >= length:
         raise ValueError("Available moves is longer than length")
@@ -46,97 +45,75 @@ class CPMLTorchMarlEnv(EnvBase):
         self.games = [CPGame.CPGame(self.agent_names,
                       deck=torch.randperm(52, generator=self.rng).tolist()) 
                       for _ in range(self.num_envs)]
-        self.action_history = torch.zeros(torch.Size([self.num_envs, self.hist_len, 52]), dtype=torch.int64)
         return TensorDict({
             agent_name: TensorDict({
-                "observation" : TensorDict({
-                    "hand": torch.tensor([[c in game.hands[agent_name] for c in range(52)] for game in self.games], dtype=torch.int64),
-                    "available_actions": torch.tensor(
-                        [
+               "hand": torch.tensor([[[c in game.hands[agent_name] for c in range(52)]] for game in self.games], dtype=torch.int64),
+                "available_actions": torch.tensor(
+                    [
+                        [[
                             [
-                                [
-                                    c in move 
-                                    for c in range(52)
-                                ] 
-                                for move in pad_list(game.getMoves(agent_name), self.AVAILABLE_ACTIONS_LEN)
+                                c in move 
+                                for c in range(52)
                             ] 
-                            for game in self.games
-                        ], dtype=torch.int64
-                    ),
-                    "num_actions": torch.tensor(
-                        [max([1,len(game.getMoves(agent_name))]) for game in self.games], dtype=torch.int64
-                    )
-                }, batch_size=self.batch_size),
-
-                "reward": torch.tensor([0.0 for game in self.games], dtype=torch.float)
-            }, batch_size=self.batch_size)
+                            for move in pad_list(game.getMoves(agent_name), self.AVAILABLE_ACTIONS_LEN)
+                        ]] 
+                        for game in self.games
+                    ], dtype=torch.int64
+                ),
+                "num_actions": torch.tensor(
+                    [[max([1,len(game.getMoves(agent_name))])] for game in self.games], dtype=torch.int64
+                ),
+            }, batch_size=[self.num_envs,1])
             for agent_name in self.agent_names
         } | {
-            "observation": TensorDict({
-                "tomove": torch.tensor([game.to_move_index() for game in self.games], dtype=torch.int64),
-                "actionhistory": torch.zeros(torch.Size([self.num_envs, self.hist_len, 52]), dtype=torch.int64)
-            }, batch_size=self.batch_size),
-            "done": torch.tensor([False] * self.num_envs, dtype=torch.bool)
-        }, batch_size=self.batch_size)
+           "tomove": torch.tensor([[game.to_move_index()] for game in self.games], dtype=torch.int64),
+           "actionhistory": torch.zeros(torch.Size([self.num_envs, self.hist_len, 52]), dtype=torch.int64),
+           "done": torch.tensor([False] * self.num_envs, dtype=torch.bool)
+        }, batch_size=[self.num_envs])
         
     def _step(self, tensordict):
         done = torch.zeros(self.batch_size, dtype=torch.bool)
-        actionhistory = torch.roll(tensordict["observation","actionhistory"], 1, 1)
+        actionhistory = torch.roll(tensordict["actionhistory"], 1, 1)
         for i in range(self.total_batch_size()):
             game = self.games[i]
-            this_player=self.agent_names[tensordict["observation", "tomove"][i]]
-            action_index = torch.argmax(tensordict[this_player]["action"][i])
-            deck_action = tensordict[this_player]["observation", "available_actions"][i, action_index]
+            this_player=self.agent_names[tensordict["tomove"][i]]
+            action_index = torch.argmax(tensordict[this_player]["action"][i][0])
+            deck_action = tensordict[this_player]["available_actions"][i, 0, action_index]
             try:
                 game.implementMove([c for c in range(52) if deck_action[c]])
             except CPGame.MoveError as move_error:
                 print(f"Move error: {move_error.move} {move_error.msg}")
-            self.action_history[i,0,:] = deck_action
             if len(self.batch_size) == 0:
                 done = torch.tensor(game.done())
             else:
                 done[i] = game.done()
         out = TensorDict({
             agent_name: TensorDict({
-                "observation" : TensorDict({
-                    "hand": torch.tensor([[c in game.hands[agent_name] for c in range(52)] for game in self.games], dtype=torch.int64),
-                    "available_actions": torch.tensor(
-                        [
-                            [
-                                [
-                                    c in move 
-                                    for c in range(52)
-                                ] 
-                                for move in pad_list(game.getMoves(agent_name), self.AVAILABLE_ACTIONS_LEN)
-                            ] 
-                            for game in self.games
-                        ], dtype=torch.int64
-                    ),
-                    "num_actions": torch.tensor(
-                        [max([1,len(game.getMoves(agent_name))]) for game in self.games], dtype=torch.int64
-                    )
-                }, batch_size=self.batch_size),
-
-                "action": torch.tensor(
+                "hand": torch.tensor([[[c in game.hands[agent_name] for c in range(52)]] for game in self.games], dtype=torch.int64),
+                "available_actions": torch.tensor(
                     [
-                        [
-                            self.encode_move(move) 
+                        [[
+                            [
+                                c in move 
+                                for c in range(52)
+                            ] 
                             for move in pad_list(game.getMoves(agent_name), self.AVAILABLE_ACTIONS_LEN)
-                        ] 
+                        ]] 
                         for game in self.games
                     ], dtype=torch.int64
                 ),
+                "num_actions": torch.tensor(
+                    [[max([1,len(game.getMoves(agent_name))])] for game in self.games], dtype=torch.int64
+                ),
 
-                "reward": torch.tensor([game.reward(agent_name) for game in self.games], dtype=torch.float)
-            }, batch_size=self.batch_size)
+                "reward": torch.tensor([[game.reward(agent_name)] for game in self.games], dtype=torch.float)
+            }, batch_size=[self.num_envs,1])
             for agent_name in self.agent_names
         } | {
-            "observation": TensorDict({
-                "tomove": torch.tensor([game.to_move_index() for game in self.games], dtype=torch.int64),
-                "actionhistory": actionhistory
-            }, batch_size=self.batch_size),
+            "tomove": torch.tensor([[game.to_move_index()] for game in self.games], dtype=torch.int64),
+            "actionhistory": actionhistory,
             "done": done
-        }, batch_size=self.batch_size)
+        }, batch_size=[self.num_envs])
         return out
     
     def _make_spec(self, num_players, hist_len):
@@ -189,8 +166,12 @@ class CPMLTorchMarlEnv(EnvBase):
         reward_spec = CompositeSpec({
             "reward": UnboundedContinuousTensorSpec(shape=(1,), dtype=torch.float32)
         })
+
+        group_observation_spec = torch.stack([observation_spec], dim=0)
+        group_action_spec = torch.stack([action_spec], dim=0)
+        group_reward_spec = torch.stack([reward_spec], dim=0)
         
-        return observation_spec, action_spec, reward_spec
+        return group_observation_spec, group_action_spec, group_reward_spec
 
 
     def _set_seed(self, seed):
@@ -215,7 +196,7 @@ class CPMLTorchMarlEnv(EnvBase):
             )
         for agent_name in self.agent_names:
             tensordict[agent_name]["action"] = fun.one_hot(
-                torch.tensor(np.random.randint(tensordict[agent_name]["observation"]["num_actions"], size=self.num_envs)),
+                torch.tensor(np.random.randint(tensordict[agent_name]["num_actions"], size=(self.num_envs,1))),
                 num_classes=self.AVAILABLE_ACTIONS_LEN
             ) 
         return tensordict
