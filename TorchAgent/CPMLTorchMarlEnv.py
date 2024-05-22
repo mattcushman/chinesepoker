@@ -83,6 +83,7 @@ class CPMLTorchMarlEnv(EnvBase):
                 game.implementMove([c for c in range(52) if deck_action[c]])
             except CPGame.MoveError as move_error:
                 print(f"Move error: {move_error.move} {move_error.msg}")
+            actionhistory[i, 0] = deck_action
             if len(self.batch_size) == 0:
                 done = torch.tensor(game.done())
             else:
