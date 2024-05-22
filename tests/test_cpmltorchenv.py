@@ -81,13 +81,9 @@ def test_CMPLtorch_env_fullgame():
             print(f"{i}: {torch_env.games[0].cardsToString(move)}")
         print(f"action index = {action_index}")
         print(f"action = {actions_list[action_index]}")
-        if round % 2 == 0:
-            move_0 = action_index
-            move_1 = 0
-        else:
-            move_0 = 0
-            move_1 = action_index
-        obs = torch_env.step(make_marl_action({"player_0": move_0, "player_1": move_1}, obs))
+        obs = torch_env.step(TensorDict({"action": fun.one_hot(torch.tensor(len(actions_list)-1), 
+                                                              CPMLTorchEnv.AVAILABLE_ACTIONS_LEN)},
+                                                              batch_size=[]))
         round += 1
 
 def test_CMPLtorch_env_fullgame_hardcode():
