@@ -122,8 +122,11 @@ class CPMLTorchMarlEnv(EnvBase):
         self.unbatched_observation_spec = CompositeSpec(device=self.device)
         self.unbatched_reward_spec = CompositeSpec(device=self.device)
 
-        self.unbatched_observation_spec["tomove"] = DiscreteTensorSpec(n=num_players, shape=torch.Size((1,)))
-        self.unbatched_observation_spec["actionhistory"] = BinaryDiscreteTensorSpec(52, shape=(self.hist_len, 52), dtype=torch.int64)
+        self.unbatched_observation_spec["tomove"] = DiscreteTensorSpec(n=num_players, shape=torch.Size((1,)), 
+                                                                       device=self.device)
+        self.unbatched_observation_spec["actionhistory"] = BinaryDiscreteTensorSpec(52, shape=(self.hist_len, 52), 
+                                                                                    dtype=torch.int64,
+                                                                                    device=self.device)
 
         for agent_name in self.agent_names:
             (

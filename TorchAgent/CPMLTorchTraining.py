@@ -1,10 +1,51 @@
 import numpy as np
+import argparse
 import torch
 from torch import nn
 from torch import optim
-from CPMLAgent  import CPMLGameEnv
-from CPMLAgent.CPMLModelDef import create_q_model, get_action_probs, get_group_action_probs, num_players, hist_len, loss_function
+from torchrl.modules import MultiAgentMLP
+from tensordict.nn import TensorDictModule
+from TorchAgent.CPMLTorchMarlEnv import CPMLTorchMarlEnv
+import multiprocessing
 
+def make_policy_modules(env):
+    policy_modules = {}
+    for group in env.agent_names:
+        num_inputs = (env.observation_spec["tomove"].shape[-1] +
+                      env.observation_spec["actionhistory"].shape[-1] * env.observation_spec["actionhistory"].shape[-2] +
+                      env.observation_spec[group, "hand"].shape[-1] +
+                      env.observation_spec[group, "available_actions"].shape[-1] * env.observation_spec[group, "available_actions"].shape[-2] +
+                      env.observation_spec[group, "num_actions"].shape[-1]
+        )
+        policy_net = MultiAgentMLP(
+            n_agent_inputs=num_inputs,
+            n_agent_outputs=env.full_action_spec[group].shape[-1],
+            n_agents=1,
+            share_params=False,
+            device=env.device,
+            depth=2,
+            num_cells=128,
+            activation_class=nn.ReLU,
+            centralised=False,
+        )
+        policy_module = TensorDictModule(
+            policy_net,
+            in_keys=["tomove", "actionhistory", (group, "hand"), (group, "available_actions"), (group, "num_actions")],
+            out_keys=[(group, "param")],
+        )
+        policy_modules[group] = policy_module
+    return policy_modules
+
+
+
+# define the main function
+def main():
+    # parse command line parameters
+    args = parse_args()
+    device = setup()
+    # create the environment
+    env = CPMLTorchMarlEnv(seed=args.seed, device=device)
+    policy_modules = make_policy_modules(env)
 
 def setup():
     is_fork = multiprocessing.get_start_method() == "fork"
@@ -14,7 +55,7 @@ def setup():
         else torch.device("cpu")
     )
     return device
-)
+
 
 # parse command line parameters for machine learning training
 def parse_args():
@@ -36,3 +77,5 @@ def parse_args():
     parser.add_argument("--logdir", type=str, default="logs")
     return parser.parse_args()
 
+if __name__ == "__main__":
+    main()
