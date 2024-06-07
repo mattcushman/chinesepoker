@@ -47,7 +47,8 @@ class CPMLTorchMarlEnv(EnvBase):
                       for _ in range(self.num_envs)]
         return TensorDict({
             agent_name: TensorDict({
-               "hand": torch.tensor([[[c in game.hands[agent_name] for c in range(52)]] for game in self.games], dtype=torch.int64),
+               "hand": torch.tensor([[[c in game.hands[agent_name] for c in range(52)]] for game in self.games], 
+                                    dtype=torch.int64, device=self.device),
                 "available_actions": torch.tensor(
                     [
                         [[
@@ -58,21 +59,21 @@ class CPMLTorchMarlEnv(EnvBase):
                             for move in pad_list(game.getMoves(agent_name), self.AVAILABLE_ACTIONS_LEN)
                         ]] 
                         for game in self.games
-                    ], dtype=torch.int64
+                    ], dtype=torch.int64, device=self.device
                 ),
                 "num_actions": torch.tensor(
-                    [[max([1,len(game.getMoves(agent_name))])] for game in self.games], dtype=torch.int64
+                    [[max([1,len(game.getMoves(agent_name))])] for game in self.games], dtype=torch.int64, device=self.device
                 ),
             }, batch_size=[self.num_envs,1])
             for agent_name in self.agent_names
         } | {
-           "tomove": torch.tensor([[game.to_move_index()] for game in self.games], dtype=torch.int64),
-           "actionhistory": torch.zeros(torch.Size([self.num_envs, self.hist_len, 52]), dtype=torch.int64),
-           "done": torch.tensor([False] * self.num_envs, dtype=torch.bool)
+           "tomove": torch.tensor([[game.to_move_index()] for game in self.games], dtype=torch.int64, device=self.device),
+           "actionhistory": torch.zeros(torch.Size([self.num_envs, self.hist_len, 52]), dtype=torch.int64, device=self.device),
+           "done": torch.tensor([False] * self.num_envs, dtype=torch.bool, device=self.device)
         }, batch_size=[self.num_envs])
         
     def _step(self, tensordict):
-        done = torch.zeros(self.batch_size, dtype=torch.bool)
+        done = torch.zeros(self.batch_size, dtype=torch.bool, device=self.device)
         actionhistory = torch.roll(tensordict["actionhistory"], 1, 1)
         for i in range(self.total_batch_size()):
             game = self.games[i]
@@ -90,7 +91,8 @@ class CPMLTorchMarlEnv(EnvBase):
                 done[i] = game.done()
         out = TensorDict({
             agent_name: TensorDict({
-                "hand": torch.tensor([[[c in game.hands[agent_name] for c in range(52)]] for game in self.games], dtype=torch.int64),
+                "hand": torch.tensor([[[c in game.hands[agent_name] for c in range(52)]] for game in self.games], 
+                                     dtype=torch.int64, device=self.device),
                 "available_actions": torch.tensor(
                     [
                         [[
@@ -101,17 +103,17 @@ class CPMLTorchMarlEnv(EnvBase):
                             for move in pad_list(game.getMoves(agent_name), self.AVAILABLE_ACTIONS_LEN)
                         ]] 
                         for game in self.games
-                    ], dtype=torch.int64
+                    ], dtype=torch.int64, device=self.device
                 ),
                 "num_actions": torch.tensor(
-                    [[max([1,len(game.getMoves(agent_name))])] for game in self.games], dtype=torch.int64
+                    [[max([1,len(game.getMoves(agent_name))])] for game in self.games], dtype=torch.int64, device=self.device
                 ),
 
-                "reward": torch.tensor([[game.reward(agent_name)] for game in self.games], dtype=torch.float)
+                "reward": torch.tensor([[game.reward(agent_name)] for game in self.games], dtype=torch.float, device=self.device)
             }, batch_size=[self.num_envs,1])
             for agent_name in self.agent_names
         } | {
-            "tomove": torch.tensor([[game.to_move_index()] for game in self.games], dtype=torch.int64),
+            "tomove": torch.tensor([[game.to_move_index()] for game in self.games], dtype=torch.int64, device=self.device),
             "actionhistory": actionhistory,
             "done": done
         }, batch_size=[self.num_envs])

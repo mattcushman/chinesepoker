@@ -3,22 +3,42 @@ import argparse
 import torch
 from torch import nn
 from torch import optim
-from torchrl.modules import MultiAgentMLP
-from tensordict.nn import TensorDictModule
+from torchrl.modules import MultiAgentMLP, Actor
+from tensordict.nn import TensorDictModule, TensorDictSequential
+from torchrl.envs import TransformedEnv, RewardSum
 from TorchAgent.CPMLTorchMarlEnv import CPMLTorchMarlEnv
 import multiprocessing
+
+def make_observation_module(env, group, out_key="all_observations"):
+    return TensorDictModule(
+            lambda  tomove, actionhistory, hand, available_actions, num_actions: 
+                torch.cat([
+                    tomove[:,None,:], 
+                    torch.flatten(actionhistory, start_dim=1)[:,None,:], 
+                    hand, 
+                    torch.flatten(available_actions, start_dim=2), 
+                    num_actions[:,None,:]
+                ], dim=-1)
+            ,
+            in_keys=["tomove", "actionhistory", (group, "hand"), (group, "available_actions"), (group, "num_actions")],
+            out_keys=[out_key],
+        )
+
+def num_observation_dimensions(env, group):
+    return (env.observation_spec["tomove"].shape[-1] +
+            env.observation_spec["actionhistory"].shape[-1] * env.observation_spec["actionhistory"].shape[-2] +
+            env.observation_spec[group, "hand"].shape[-1] +
+            env.observation_spec[group, "available_actions"].shape[-1] * env.observation_spec[group, "available_actions"].shape[-2] +
+            env.observation_spec[group, "num_actions"].shape[-1]
+            )
 
 def make_policy_modules(env):
     policy_modules = {}
     for group in env.agent_names:
-        num_inputs = (env.observation_spec["tomove"].shape[-1] +
-                      env.observation_spec["actionhistory"].shape[-1] * env.observation_spec["actionhistory"].shape[-2] +
-                      env.observation_spec[group, "hand"].shape[-1] +
-                      env.observation_spec[group, "available_actions"].shape[-1] * env.observation_spec[group, "available_actions"].shape[-2] +
-                      env.observation_spec[group, "num_actions"].shape[-1]
-        )
+        group_observation_key = (group, "all_observations")
+        cat_module = make_observation_module(env, group, group_observation_key)
         policy_net = MultiAgentMLP(
-            n_agent_inputs=num_inputs,
+            n_agent_inputs=num_observation_dimensions(env, group),
             n_agent_outputs=env.full_action_spec[group].shape[-1],
             n_agents=1,
             share_params=False,
@@ -30,13 +50,56 @@ def make_policy_modules(env):
         )
         policy_module = TensorDictModule(
             policy_net,
-            in_keys=["tomove", "actionhistory", (group, "hand"), (group, "available_actions"), (group, "num_actions")],
-            out_keys=[(group, "param")],
+            in_keys=[group_observation_key],
+            out_keys=[f"param_{group}"],
         )
-        policy_modules[group] = policy_module
+        policy_modules[group] = TensorDictSequential(cat_module, policy_module)
     return policy_modules
 
+def make_policies(env, policy_modules):
+    policies = {}
+    for group, policy_module in policy_modules.items():
+        policies[group] = Actor(
+            module = policy_module,
+            spec = env.full_action_spec[group],
+            safe = True,
+        )
+    return policies
 
+def make_critics(args, env):
+    critics = {}
+    for group in env.agent_names:
+        obs_action_cat_module = make_observation_module(env, group, "obs_action_cat")
+
+        critic_module = TensorDictModule(
+            module=MultiAgentMLP(
+                n_agent_inputs=num_observation_dimensions(env, group) + env.full_action_spec[group].shape[-1],
+                n_agent_outputs=1,
+                n_agents=1,
+                share_params=args.share_params_critic,
+                device=env.device,
+                depth=2,
+                num_cells=128,
+                activation_class=nn.ReLU,
+                centralised=args.centralised_critic,
+            ),
+            in_keys=["obs_action_cat"],
+            out_keys=["obs_action_value"],
+        )
+
+        critics[group] = TensorDictSequential(obs_action_cat_module, critic_module)
+    return critics
+
+def temp_lambda(tomove, actionhistory, hand, available_actions, num_actions):
+    print(f"tomove: {tomove.shape}, actionhistory: {actionhistory.shape}, hand: {hand.shape}")
+    print(f"available_actions: {available_actions.shape}, num_actions: {num_actions.shape}")
+    return torch.cat([
+        tomove[:,None,:],
+        torch.flatten(actionhistory, start_dim=1)[:,None,:],
+        hand,
+        torch.flatten(available_actions, start_dim=2),
+        num_actions[:,None,:]
+    ], dim=-1)
 
 # define the main function
 def main():
@@ -44,8 +107,47 @@ def main():
     args = parse_args()
     device = setup()
     # create the environment
-    env = CPMLTorchMarlEnv(seed=args.seed, device=device)
+    base_env = CPMLTorchMarlEnv(seed=args.seed,
+                               num_envs=args.batch_size,
+                               device=device
+                               )
+    env = TransformedEnv(
+        base_env,
+        RewardSum(
+            in_keys=base_env.reward_keys,
+            reset_keys=["_reset"] * len(base_env.group_map.keys()),
+        )
+    )
     policy_modules = make_policy_modules(env)
+    policies = make_policies(env, policy_modules)
+    critics = make_critics(args, env)
+
+    reset_td = env.reset()
+    # print("action_spec:", env.full_action_spec)
+    # print("reward_spec:", env.full_reward_spec)
+    # print("done_spec:", env.full_done_spec)
+    # print("observation_spec:", env.observation_spec)
+    for group, agents in env.group_map.items():
+        # print("**** Lambda Call Output ******")
+        lambda_module = TensorDictModule( temp_lambda, 
+                            in_keys=["tomove",
+                                    "actionhistory", 
+                                    (group,"hand"),
+                                    (group,"available_actions"),
+                                    (group,"num_actions")
+                                    ], out_keys="out")(reset_td)
+        # print(lambda_module)
+        # print(f"Lambda module shape {lambda_module.shape}")
+        # print("**** Cat Module ******")
+        # cat_module = make_observation_module(env, group, (group, "all_observations"))
+        # print(reset_td)
+        # print(f'Shape of reset_td: {reset_td.shape}')
+        # cat_module(reset_td)
+        # print("*** Policy Module *******")
+        policy_modules[group](reset_td)
+        print(f"Running value and policy for group {group}: " +
+              critics[group](policies[group](reset_td))
+        )
 
 def setup():
     is_fork = multiprocessing.get_start_method() == "fork"
@@ -75,6 +177,8 @@ def parse_args():
     parser.add_argument("--save-model", type=str, default=None)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--logdir", type=str, default="logs")
+    parser.add_argument("--share-params-critic", type=bool, default=True)
+    parser.add_argument("--centralised-critic", type=bool, default=True)
     return parser.parse_args()
 
 if __name__ == "__main__":
