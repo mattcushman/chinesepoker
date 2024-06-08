@@ -24,6 +24,22 @@ def make_observation_module(env, group, out_key="all_observations"):
             out_keys=[out_key],
         )
 
+def make_observation_action_module(env, group, out_key="obs_action_cat"):
+    return TensorDictModule(
+            lambda  tomove, actionhistory, hand, available_actions, num_actions, action: 
+                torch.cat([
+                    tomove[:,None,:], 
+                    torch.flatten(actionhistory, start_dim=1)[:,None,:], 
+                    hand, 
+                    torch.flatten(available_actions, start_dim=2), 
+                    num_actions[:,None,:],
+                    action
+                ], dim=-1)
+            ,
+            in_keys=["tomove", "actionhistory", (group, "hand"), (group, "available_actions"), (group, "num_actions"), (group, "action")],
+            out_keys=[out_key],
+        )
+
 def num_observation_dimensions(env, group):
     return (env.observation_spec["tomove"].shape[-1] +
             env.observation_spec["actionhistory"].shape[-1] * env.observation_spec["actionhistory"].shape[-2] +
@@ -51,7 +67,7 @@ def make_policy_modules(env):
         policy_module = TensorDictModule(
             policy_net,
             in_keys=[group_observation_key],
-            out_keys=[f"param_{group}"],
+            out_keys=[(group, "action")],
         )
         policy_modules[group] = TensorDictSequential(cat_module, policy_module)
     return policy_modules
@@ -69,7 +85,7 @@ def make_policies(env, policy_modules):
 def make_critics(args, env):
     critics = {}
     for group in env.agent_names:
-        obs_action_cat_module = make_observation_module(env, group, "obs_action_cat")
+        obs_action_cat_module = make_observation_action_module(env, group, (group, "obs_action_cat"))
 
         critic_module = TensorDictModule(
             module=MultiAgentMLP(
@@ -83,8 +99,8 @@ def make_critics(args, env):
                 activation_class=nn.ReLU,
                 centralised=args.centralised_critic,
             ),
-            in_keys=["obs_action_cat"],
-            out_keys=["obs_action_value"],
+            in_keys=[(group, "obs_action_cat")],
+            out_keys=[(group, "obs_action_value")],
         )
 
         critics[group] = TensorDictSequential(obs_action_cat_module, critic_module)
@@ -123,12 +139,7 @@ def main():
     critics = make_critics(args, env)
 
     reset_td = env.reset()
-    # print("action_spec:", env.full_action_spec)
-    # print("reward_spec:", env.full_reward_spec)
-    # print("done_spec:", env.full_done_spec)
-    # print("observation_spec:", env.observation_spec)
     for group, agents in env.group_map.items():
-        # print("**** Lambda Call Output ******")
         lambda_module = TensorDictModule( temp_lambda, 
                             in_keys=["tomove",
                                     "actionhistory", 
@@ -136,17 +147,9 @@ def main():
                                     (group,"available_actions"),
                                     (group,"num_actions")
                                     ], out_keys="out")(reset_td)
-        # print(lambda_module)
-        # print(f"Lambda module shape {lambda_module.shape}")
-        # print("**** Cat Module ******")
-        # cat_module = make_observation_module(env, group, (group, "all_observations"))
-        # print(reset_td)
-        # print(f'Shape of reset_td: {reset_td.shape}')
-        # cat_module(reset_td)
-        # print("*** Policy Module *******")
-        policy_modules[group](reset_td)
-        print(f"Running value and policy for group {group}: " +
-              critics[group](policies[group](reset_td))
+        policy_output = policy_modules[group](reset_td.float())
+        print(f"Running value and policy for group {group}: ",
+              critics[group](policy_output)
         )
 
 def setup():
