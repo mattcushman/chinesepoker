@@ -3,9 +3,10 @@ import argparse
 import torch
 from torch import nn
 from torch import optim
-from torchrl.modules import MultiAgentMLP, Actor
+from torchrl.modules import MultiAgentMLP, Actor, EGreedyModule
 from tensordict.nn import TensorDictModule, TensorDictSequential
 from torchrl.envs import TransformedEnv, RewardSum
+from torchrl.collectors import SyncDataCollector
 from TorchAgent.CPMLTorchMarlEnv import CPMLTorchMarlEnv
 import multiprocessing
 
@@ -77,7 +78,9 @@ def make_policies(env, policy_modules):
     for group, policy_module in policy_modules.items():
         policies[group] = Actor(
             module = policy_module,
-            spec = env.full_action_spec[group],
+            spec = env.full_action_spec[(group, "action")],
+            in_keys=[(group, "param")],
+            out_keys=[(group, "action")],
             safe = True,
         )
     return policies
@@ -100,7 +103,7 @@ def make_critics(args, env):
                 centralised=args.centralised_critic,
             ),
             in_keys=[(group, "obs_action_cat")],
-            out_keys=[(group, "obs_action_value")],
+            out_keys=[(group, "state_action_value")],
         )
 
         critics[group] = TensorDictSequential(obs_action_cat_module, critic_module)
@@ -135,22 +138,46 @@ def main():
         )
     )
     policy_modules = make_policy_modules(env)
-    policies = make_policies(env, policy_modules)
+    # policies = make_policies(env, policy_modules)
     critics = make_critics(args, env)
 
     reset_td = env.reset()
     for group, agents in env.group_map.items():
-        lambda_module = TensorDictModule( temp_lambda, 
-                            in_keys=["tomove",
-                                    "actionhistory", 
-                                    (group,"hand"),
-                                    (group,"available_actions"),
-                                    (group,"num_actions")
-                                    ], out_keys="out")(reset_td)
-        policy_output = policy_modules[group](reset_td.float())
+        # lambda_module = TensorDictModule( temp_lambda, 
+        #                     in_keys=["tomove",
+        #                             "actionhistory", 
+        #                             (group,"hand"),
+        #                             (group,"available_actions"),
+        #                             (group,"num_actions")
+        #                             ], out_keys="out")(reset_td)
+        policy_module_output = policy_modules[group](reset_td.float())
         print(f"Running value and policy for group {group}: ",
-              critics[group](policy_output)
+              critics[group](policy_modules[group](reset_td.float()))
         )
+
+    # do we need to create some exploration policies here?
+    exploration_policies = {}
+    for group, policy in policy_modules.items():
+        exploration_policies[group] = TensorDictSequential(
+            policy,
+            EGreedyModule(spec=env.full_action_spec[(group,"action")], 
+                          eps_init=0.2, 
+                          eps_end=0.01, 
+                          annealing_num_steps=1000,
+                          action_key=(group, "action"))
+        )
+
+    # Data collection
+    agents_exploration_policy = TensorDictSequential(*exploration_policies.values())
+
+    collector = SyncDataCollector(
+        env, 
+        agents_exploration_policy,
+        device=device,
+        frames_per_batch=args.batch_size,
+        total_frames=args.num_episodes * args.batch_size,
+    )
+
 
 def setup():
     is_fork = multiprocessing.get_start_method() == "fork"
