@@ -5,7 +5,7 @@ from torch import nn
 from torch import optim
 from torchrl.modules import MultiAgentMLP, Actor, EGreedyModule
 from tensordict.nn import TensorDictModule, TensorDictSequential
-from torchrl.envs import TransformedEnv, RewardSum
+from torchrl.envs import TransformedEnv, RewardSum, DTypeCastTransform, Compose
 from torchrl.collectors import SyncDataCollector
 from TorchAgent.CPMLTorchMarlEnv import CPMLTorchMarlEnv
 import multiprocessing
@@ -121,20 +121,33 @@ def temp_lambda(tomove, actionhistory, hand, available_actions, num_actions):
     ], dim=-1)
 
 # define the main function
-def main():
+def main(args=None):
     # parse command line parameters
-    args = parse_args()
+    args = parse_args(args)
+
     device = setup()
     # create the environment
     base_env = CPMLTorchMarlEnv(seed=args.seed,
                                num_envs=args.batch_size,
                                device=device
                                )
+    
+    long_to_float_transform = DTypeCastTransform(torch.int64, torch.float32,
+                                                 in_keys=["actionhistory", 
+                                                          ("player_0", "hand"), ("player_0", "available_actions"),
+                                                          ("player_1", "hand"), ("player_1", "available_actions")
+                                                 ],
+                                                 in_keys_inv=[]
+                                                 )
+
     env = TransformedEnv(
         base_env,
-        RewardSum(
-            in_keys=base_env.reward_keys,
-            reset_keys=["_reset"] * len(base_env.group_map.keys()),
+        Compose(
+            long_to_float_transform,
+            RewardSum(
+                in_keys=base_env.reward_keys,
+                reset_keys=["_reset"] * len(base_env.group_map.keys()),
+            )
         )
     )
     policy_modules = make_policy_modules(env)
@@ -150,9 +163,9 @@ def main():
         #                             (group,"available_actions"),
         #                             (group,"num_actions")
         #                             ], out_keys="out")(reset_td)
-        policy_module_output = policy_modules[group](reset_td.float())
+        policy_module_output = policy_modules[group](reset_td)
         print(f"Running value and policy for group {group}: ",
-              critics[group](policy_modules[group](reset_td.float()))
+              critics[group](policy_modules[group](reset_td))
         )
 
     # do we need to create some exploration policies here?
@@ -169,6 +182,8 @@ def main():
 
     # Data collection
     agents_exploration_policy = TensorDictSequential(*exploration_policies.values())
+
+    env.rollout(policy=TensorDictSequential(*policy_modules.values()), max_steps=5)
 
     collector = SyncDataCollector(
         env, 
@@ -190,7 +205,7 @@ def setup():
 
 
 # parse command line parameters for machine learning training
-def parse_args():
+def parse_args(args):
     parser = argparse.ArgumentParser()
     parser.add_argument("--num-episodes", type=int, default=1000)
     parser.add_argument("--batch-size", type=int, default=32)
@@ -209,7 +224,7 @@ def parse_args():
     parser.add_argument("--logdir", type=str, default="logs")
     parser.add_argument("--share-params-critic", type=bool, default=True)
     parser.add_argument("--centralised-critic", type=bool, default=True)
-    return parser.parse_args()
+    return parser.parse_args(args)
 
 if __name__ == "__main__":
     main()

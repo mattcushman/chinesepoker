@@ -13,7 +13,8 @@ def make_marl_action(action_dict, obs):
     for agent_name, action in action_dict.items():
         if agent_name not in obs:
             raise ValueError(f"Agent {agent_name} not in observation")
-        obs[agent_name]['action'] = [fun.one_hot(torch.tensor([action]), num_classes=CPMLTorchMarlEnv.AVAILABLE_ACTIONS_LEN)]
+        action_tensor = fun.one_hot(torch.tensor([[a] for a in action]), num_classes=CPMLTorchMarlEnv.AVAILABLE_ACTIONS_LEN)
+        obs[agent_name]['action'] = action_tensor
 
     return obs
 
@@ -130,11 +131,11 @@ def test_CPMLTorchMarlEnv_step():
     assert torch_env.games[0].toMove == 'player_1'
     assert len(torch_env.games[0].hands['player_1']) == 13
     assert len(torch_env.games[0].getMoves()) == 3
-    obs = torch_env.step(make_marl_action({"player_0": 0, "player_1": 0}, obs)) 
+    obs = torch_env.step(make_marl_action({"player_0": [0], "player_1": [0]}, obs)) 
     obs = step_mdp(obs)
     assert torch_env.games[0].toMove == 'player_0'
     assert len(torch_env.games[0].getMoves()) == 14
-    obs = torch_env.step(make_marl_action({"player_0": 2, "player_1": 0}, obs)) 
+    obs = torch_env.step(make_marl_action({"player_0": [2], "player_1": [0]}, obs)) 
     assert torch_env.games[0].toMove == 'player_1'
     assert len(torch_env.games[0].getMoves()) == 12
 
@@ -175,7 +176,7 @@ def test_CMPLtorch_env_fullgame_marl():
         else:
             move_0 = 0
             move_1 = action_index
-        obs = torch_env.step(make_marl_action({"player_0": move_0, "player_1": move_1}, obs))
+        obs = torch_env.step(make_marl_action({"player_0": [move_0], "player_1": [move_1]}, obs))
         obs = step_mdp(obs)
         round += 1
     if round == 100:
@@ -198,7 +199,7 @@ def test_CMPLtorch_env_fullgame_hardcode_marl():
         else:
             move_0 = 0
             move_1 = move_index
-        obs = torch_env.step(make_marl_action({"player_0": move_0, "player_1": move_1}, obs))
+        obs = torch_env.step(make_marl_action({"player_0":[move_0], "player_1": [move_1]}, obs))
         obs = step_mdp(obs)
         if move_number < len(move_to_make)-1:
             assert obs["done"] == False
@@ -210,3 +211,16 @@ def test_CMPLtorch_env_fullgame_hardcode_marl():
     assert obs["done"] == True
     assert obs["player_0"]["reward"] == torch.tensor(+1.0)    
     assert obs["player_1"]["reward"] == torch.tensor(-1.0)
+
+
+def test_check_env_specs_marl_multi():
+    torch_env = CPMLTorchMarlEnv(seed=1, num_envs=10)
+    torch_env.reset()
+    check_env_specs(torch_env)
+
+def test_CPMLTorchMarlEnv_step_multi():
+    torch_env = CPMLTorchMarlEnv(num_envs=10, seed=2)
+    obs = torch_env.reset()
+    obs = torch_env.step(make_marl_action({"player_0": [1]*10, "player_1": [1]*10}, obs)) 
+    obs = step_mdp(obs)
+    obs = torch_env.step(make_marl_action({"player_0": [1]*10, "player_1": [1]*10}, obs)) 
