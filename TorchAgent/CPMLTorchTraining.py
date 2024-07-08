@@ -5,7 +5,7 @@ from torch import nn
 from torch import optim
 from torchrl.modules import MultiAgentMLP, Actor, EGreedyModule
 from tensordict.nn import TensorDictModule, TensorDictSequential
-from torchrl.envs import TransformedEnv, RewardSum, DTypeCastTransform, Compose
+from torchrl.envs import TransformedEnv, RewardSum, DTypeCastTransform, Compose, check_env_specs
 from torchrl.collectors import SyncDataCollector
 from TorchAgent.CPMLTorchMarlEnv import CPMLTorchMarlEnv
 import multiprocessing
@@ -18,7 +18,7 @@ def make_observation_module(env, group, out_key="all_observations"):
                     torch.flatten(actionhistory, start_dim=1)[:,None,:], 
                     hand, 
                     torch.flatten(available_actions, start_dim=2), 
-                    num_actions[:,None,:]
+                    num_actions
                 ], dim=-1)
             ,
             in_keys=["tomove", "actionhistory", (group, "hand"), (group, "available_actions"), (group, "num_actions")],
@@ -142,31 +142,22 @@ def main(args=None):
 
     env = TransformedEnv(
         base_env,
-        Compose(
-            long_to_float_transform,
-            RewardSum(
-                in_keys=base_env.reward_keys,
-                reset_keys=["_reset"] * len(base_env.group_map.keys()),
-            )
-        )
+        long_to_float_transform,
     )
+
     policy_modules = make_policy_modules(env)
     # policies = make_policies(env, policy_modules)
     critics = make_critics(args, env)
 
-    reset_td = env.reset()
-    for group, agents in env.group_map.items():
-        # lambda_module = TensorDictModule( temp_lambda, 
-        #                     in_keys=["tomove",
-        #                             "actionhistory", 
-        #                             (group,"hand"),
-        #                             (group,"available_actions"),
-        #                             (group,"num_actions")
-        #                             ], out_keys="out")(reset_td)
-        policy_module_output = policy_modules[group](reset_td)
-        print(f"Running value and policy for group {group}: ",
-              critics[group](policy_modules[group](reset_td))
-        )
+    td = env.reset()
+    print(td)
+    td = policy_modules['player_0'](td)
+    td = policy_modules['player_1'](td)
+    print('************************************************************************************************')
+    print(td)
+    print('************************************************************************************************')
+    env.step(td)
+
 
     # do we need to create some exploration policies here?
     exploration_policies = {}
@@ -182,6 +173,10 @@ def main(args=None):
 
     # Data collection
     agents_exploration_policy = TensorDictSequential(*exploration_policies.values())
+
+    print(policy_modules['player_0'])
+
+
 
     env.rollout(policy=TensorDictSequential(*policy_modules.values()), max_steps=5)
 

@@ -62,7 +62,7 @@ class CPMLTorchMarlEnv(EnvBase):
                     ], dtype=torch.int64, device=self.device
                 ),
                 "num_actions": torch.tensor(
-                    [[max([1,len(game.getMoves(agent_name))])] for game in self.games], dtype=torch.int64, device=self.device
+                    [[[max([1,len(game.getMoves(agent_name))])]] for game in self.games], dtype=torch.int64, device=self.device
                 ),
             }, batch_size=[self.num_envs,1])
             for agent_name in self.agent_names
@@ -80,10 +80,7 @@ class CPMLTorchMarlEnv(EnvBase):
             this_player=self.agent_names[tensordict["tomove"][i]]
             action_index = torch.argmax(tensordict[this_player]["action"][i][0])
             deck_action = tensordict[this_player]["available_actions"][i, 0, action_index]
-            try:
-                game.implementMove([c for c in range(52) if deck_action[c]])
-            except CPGame.MoveError as move_error:
-                print(f"Move error: {move_error.move} {move_error.msg}")
+            game.implementMove([c for c in range(52) if deck_action[c]])
             actionhistory[i, 0] = deck_action
             if len(self.batch_size) == 0:
                 done = torch.tensor(game.done())
@@ -106,7 +103,7 @@ class CPMLTorchMarlEnv(EnvBase):
                     ], dtype=torch.int64, device=self.device
                 ),
                 "num_actions": torch.tensor(
-                    [[max([1,len(game.getMoves(agent_name))])] for game in self.games], dtype=torch.int64, device=self.device
+                    [[[max([1,len(game.getMoves(agent_name))])]] for game in self.games], dtype=torch.int64, device=self.device
                 ),
 
                 "reward": torch.tensor([[game.reward(agent_name)] for game in self.games], dtype=torch.float, device=self.device)
@@ -165,7 +162,7 @@ class CPMLTorchMarlEnv(EnvBase):
         observation_spec = CompositeSpec({
             "hand": BinaryDiscreteTensorSpec(52, dtype=torch.int64),
             "available_actions": BinaryDiscreteTensorSpec(52, shape=(self.AVAILABLE_ACTIONS_LEN, 52), dtype=torch.int64),
-            "num_actions": DiscreteTensorSpec(self.AVAILABLE_ACTIONS_LEN, dtype=torch.int64),
+            "num_actions": DiscreteTensorSpec(self.AVAILABLE_ACTIONS_LEN, shape=(1,), dtype=torch.int64),
         })
 
         # It's important to wrap this in a CompositeSpec, as the agent_name is used as a key in the spec with "reward"
@@ -201,8 +198,10 @@ class CPMLTorchMarlEnv(EnvBase):
                 f" match the tensordict one."
             )
         for agent_name in self.agent_names:
+            num_actions_cpu = tensordict[agent_name]["num_actions"].cpu()
+            random_actions = [[np.random.randint(num_actions_cpu[k][0][0])] for k in range(self.num_envs)]
             tensordict[agent_name]["action"] = fun.one_hot(
-                torch.tensor(np.random.randint(tensordict[agent_name]["num_actions"], size=(self.num_envs,1))),
+                torch.tensor(random_actions, device=self.device),
                 num_classes=self.AVAILABLE_ACTIONS_LEN
             ) 
         return tensordict

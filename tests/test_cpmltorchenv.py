@@ -214,13 +214,13 @@ def test_CMPLtorch_env_fullgame_hardcode_marl():
 
 
 def test_check_env_specs_marl_multi():
-    torch_env = CPMLTorchMarlEnv(seed=1, num_envs=10)
+    torch_env = CPMLTorchMarlEnv(seed=1, num_envs=12)
     torch_env.reset()
     check_env_specs(torch_env)
 
 def test_CPMLTorchMarlEnv_step_multi():
     torch_env = CPMLTorchMarlEnv(num_envs=10, seed=2)
     obs = torch_env.reset()
-    obs = torch_env.step(make_marl_action({"player_0": [1]*10, "player_1": [1]*10}, obs)) 
+    obs = torch_env.step(make_marl_action({"player_0": [0,0,0,1,0,0,0,0,0,1], "player_1": [1,0,0,0,0,3,0,0,0,0]}, obs)) 
     obs = step_mdp(obs)
-    obs = torch_env.step(make_marl_action({"player_0": [1]*10, "player_1": [1]*10}, obs)) 
+    obs = torch_env.step(make_marl_action({"player_0": [0]*10, "player_1": [1]*10}, obs)) 
