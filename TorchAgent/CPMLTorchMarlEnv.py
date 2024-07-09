@@ -78,7 +78,8 @@ class CPMLTorchMarlEnv(EnvBase):
         for i in range(self.total_batch_size()):
             game = self.games[i]
             this_player=self.agent_names[tensordict["tomove"][i]]
-            action_index = torch.argmax(tensordict[this_player]["action"][i][0])
+            num_moves = int(tensordict[this_player]["num_actions"][i, 0, 0])
+            action_index = torch.argmax(tensordict[this_player]["action"][i][0][0:num_moves])
             deck_action = tensordict[this_player]["available_actions"][i, 0, action_index]
             game.implementMove([c for c in range(52) if deck_action[c]])
             actionhistory[i, 0] = deck_action

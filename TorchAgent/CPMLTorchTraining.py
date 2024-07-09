@@ -41,6 +41,17 @@ def make_observation_action_module(env, group, out_key="obs_action_cat"):
             out_keys=[out_key],
         )
 
+# def make_lookup_module(group):
+#     return TensorDictModule(
+#         lambda action, available_actions: torch.gather(
+#             available_actions, 
+#             2, 
+#             torch.argmax(action,dim=-1)[..., None, None].long()
+#         ),
+#         in_keys=[(group, "action_index"), (group, "available_actions")],
+#         out_keys=[(group, "action")],
+#     )
+
 def num_observation_dimensions(env, group):
     return (env.observation_spec["tomove"].shape[-1] +
             env.observation_spec["actionhistory"].shape[-1] * env.observation_spec["actionhistory"].shape[-2] +
@@ -56,7 +67,7 @@ def make_policy_modules(env):
         cat_module = make_observation_module(env, group, group_observation_key)
         policy_net = MultiAgentMLP(
             n_agent_inputs=num_observation_dimensions(env, group),
-            n_agent_outputs=env.full_action_spec[group].shape[-1],
+            n_agent_outputs=env.AVAILABLE_ACTIONS_LEN,
             n_agents=1,
             share_params=False,
             device=env.device,
@@ -70,6 +81,8 @@ def make_policy_modules(env):
             in_keys=[group_observation_key],
             out_keys=[(group, "action")],
         )
+        # lookup_module = make_lookup_module(group)
+
         policy_modules[group] = TensorDictSequential(cat_module, policy_module)
     return policy_modules
 
@@ -108,17 +121,6 @@ def make_critics(args, env):
 
         critics[group] = TensorDictSequential(obs_action_cat_module, critic_module)
     return critics
-
-def temp_lambda(tomove, actionhistory, hand, available_actions, num_actions):
-    print(f"tomove: {tomove.shape}, actionhistory: {actionhistory.shape}, hand: {hand.shape}")
-    print(f"available_actions: {available_actions.shape}, num_actions: {num_actions.shape}")
-    return torch.cat([
-        tomove[:,None,:],
-        torch.flatten(actionhistory, start_dim=1)[:,None,:],
-        hand,
-        torch.flatten(available_actions, start_dim=2),
-        num_actions[:,None,:]
-    ], dim=-1)
 
 # define the main function
 def main(args=None):
