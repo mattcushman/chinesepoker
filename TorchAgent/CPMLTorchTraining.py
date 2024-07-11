@@ -1,5 +1,6 @@
 import numpy as np
 import argparse
+import copy
 
 import torch
 from torch import nn
@@ -18,6 +19,9 @@ import multiprocessing
 
 from tqdm import tqdm
 
+def group_observation_keys(group):
+    return ["tomove", "actionhistory", (group, "hand"), (group, "available_actions"), (group, "num_actions")]
+
 def make_observation_module(env, group, out_key="all_observations"):
     return TensorDictModule(
             lambda  tomove, actionhistory, hand, available_actions, num_actions: 
@@ -29,7 +33,7 @@ def make_observation_module(env, group, out_key="all_observations"):
                     num_actions
                 ], dim=-1)
             ,
-            in_keys=["tomove", "actionhistory", (group, "hand"), (group, "available_actions"), (group, "num_actions")],
+            in_keys=group_observation_keys(group),
             out_keys=[out_key],
         )
 
@@ -41,7 +45,7 @@ def make_observation_action_module(env, group, out_key="obs_action_cat"):
                     torch.flatten(actionhistory, start_dim=1)[:,None,:], 
                     hand, 
                     torch.flatten(available_actions, start_dim=2), 
-                    num_actions[:,None,:],
+                    num_actions,
                     action
                 ], dim=-1)
             ,
@@ -78,7 +82,6 @@ def make_policy_modules(env):
             in_keys=[group_observation_key],
             out_keys=[(group, "action")],
         )
-        # lookup_module = make_lookup_module(group)
 
         policy_modules[group] = TensorDictSequential(cat_module, policy_module)
     return policy_modules
@@ -89,9 +92,8 @@ def make_policies(env, policy_modules):
         policies[group] = Actor(
             module = policy_module,
             spec = env.full_action_spec[(group, "action")],
-            in_keys=[(group, "param")],
-            out_keys=[(group, "action")],
-            safe = True,
+            in_keys = group_observation_keys(group),
+            out_keys = ["_"],
         )
     return policies
 
@@ -102,7 +104,7 @@ def make_critics(args, env):
 
         critic_module = TensorDictModule(
             module=MultiAgentMLP(
-                n_agent_inputs=num_observation_dimensions(env, group) + env.full_action_spec[group].shape[-1],
+                n_agent_inputs=num_observation_dimensions(env, group) + env.AVAILABLE_ACTIONS_LEN,
                 n_agent_outputs=1,
                 n_agents=1,
                 share_params=args.share_params_critic,
@@ -131,7 +133,7 @@ def create_replay_buffers(args, device, env):
         )
     return replay_buffers
 
-def create_loss_functions(env, policy_modules, critics, replay_buffers, args):
+def create_loss_functions(env, policy_modules, critics, args):
     losses = {}
     target_updaters = {}
     for group in env.agent_names:
@@ -158,7 +160,7 @@ def create_optimizers(losses, args):
             "loss_actor": torch.optim.Adam(
                 loss.actor_network_params.flatten_keys().values(), lr=args.learning_rate
             ),
-            "loss_critic": torch.optim.Adam(
+            "loss_value": torch.optim.Adam(
                 loss.value_network_params.flatten_keys().values(), lr=args.learning_rate
             ),
         }
@@ -217,7 +219,7 @@ def main(args=None):
     )
 
     policy_modules = make_policy_modules(env)
-    # policies = make_policies(env, policy_modules)
+    policies = make_policies(env, policy_modules)
     critics = make_critics(args, env)
 
     td = env.reset()
@@ -260,7 +262,7 @@ def main(args=None):
 
     replay_buffers = create_replay_buffers(args, device, env)
 
-    losses, target_updaters = create_loss_functions(env, policy_modules, critics, replay_buffers, args)
+    losses, target_updaters = create_loss_functions(env, policy_modules, critics, args)
 
     optimizers = create_optimizers(losses, args)
 
@@ -269,7 +271,7 @@ def main(args=None):
         desc  = " ".join([f"espiode_reward_mean_{group}" for group in env.agent_names]),
     )
 
-    episode_reward_mean_map = {group: [] for group in env.group_maps.keys()}
+    episode_reward_mean_map = {group: [] for group in env.agent_names}
     train_group_map = copy.deepcopy(env.group_map)
 
     for episode, batch in enumerate(collector):
@@ -286,7 +288,7 @@ def main(args=None):
                 subdata = replay_buffers[group].sample()
                 loss_vals = losses[group](subdata)
 
-                for loss_name in ["loss_actor", "loss_critic"]:
+                for loss_name in ["loss_actor", "loss_value"]:
                     loss = loss_vals[loss_name]
                     optimizer = optimizers[group][loss_name]
                     loss.backward()
