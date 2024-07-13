@@ -5,7 +5,7 @@ import copy
 import torch
 from torch import nn
 from torch import optim
-from torchrl.modules import MultiAgentMLP, Actor, EGreedyModule
+from torchrl.modules import MLP, MultiAgentMLP, Actor, EGreedyModule
 from tensordict import TensorDictBase
 from tensordict.nn import TensorDictModule, TensorDictSequential
 from torchrl.envs import TransformedEnv, RewardSum, DTypeCastTransform, Compose, check_env_specs
@@ -64,37 +64,47 @@ def num_observation_dimensions(env, group):
 def make_policy_modules(env):
     policy_modules = {}
     for group in env.agent_names:
-        group_observation_key = (group, "all_observations")
-        cat_module = make_observation_module(env, group, group_observation_key)
-        policy_net = MultiAgentMLP(
-            n_agent_inputs=num_observation_dimensions(env, group),
-            n_agent_outputs=env.AVAILABLE_ACTIONS_LEN,
-            n_agents=1,
-            share_params=False,
-            device=env.device,
+        # group_observation_key = (group, "all_observations")
+        # cat_module = make_observation_module(env, group, group_observation_key)
+        # policy_net = MultiAgentMLP(
+        #     n_agent_inputs=num_observation_dimensions(env, group),
+        #     n_agent_outputs=env.AVAILABLE_ACTIONS_LEN,
+        #     n_agents=1,
+        #     share_params=False,
+        #     device=env.device,
+        #     depth=2,
+        #     num_cells=128,
+        #     activation_class=nn.ReLU,
+        #     centralised=False,
+        # )
+
+        policy_net = MLP(
+            in_features=num_observation_dimensions(env, group),
+            out_features=env.AVAILABLE_ACTIONS_LEN,
             depth=2,
             num_cells=128,
             activation_class=nn.ReLU,
-            centralised=False,
-        )
-        policy_module = TensorDictModule(
-            policy_net,
-            in_keys=[group_observation_key],
-            out_keys=[(group, "action")],
         )
 
-        policy_modules[group] = TensorDictSequential(cat_module, policy_module)
+        # policy_modules[group] = TensorDictSequential(cat_module, policy_module)
+        policy_modules[group] = policy_net
     return policy_modules
 
 def make_policies(env, policy_modules):
     policies = {}
     for group, policy_module in policy_modules.items():
-        policies[group] = Actor(
+        group_observation_key = (group, "all_observations")
+
+        cat_module = make_observation_module(env, group, group_observation_key)
+
+        actor = Actor(
             module = policy_module,
             spec = env.full_action_spec[(group, "action")],
-            in_keys = group_observation_keys(group),
-            out_keys = ["_"],
+            in_keys = group_observation_key,
+            out_keys = [(group, "action")],
         )
+
+        policies[group] = TensorDictSequential(cat_module, actor)
     return policies
 
 def make_critics(args, env):
@@ -222,35 +232,37 @@ def main(args=None):
     policies = make_policies(env, policy_modules)
     critics = make_critics(args, env)
 
-    td = env.reset()
-    print(td)
-    td = policy_modules['player_0'](td)
-    td = policy_modules['player_1'](td)
-    print('************************************************************************************************')
-    print(td)
-    print('************************************************************************************************')
-    env.step(td)
+    # td = env.reset()
+    # print(td)
+    # td = policy_modules['player_0'](td)
+    # td = policy_modules['player_1'](td)
+    # print('************************************************************************************************')
+    # print(td)
+    # print('************************************************************************************************')
+    # env.step(td)
 
     # do we need to create some exploration policies here?
+    exploration_modules = {}
     exploration_policies = {}
-    for group, policy in policy_modules.items():
+    for group, policy in policies.items():
+        exploration_modules[group] = EGreedyModule(spec=env.full_action_spec[(group,"action")], 
+            eps_init=0.2, 
+            eps_end=0.01, 
+            annealing_num_steps=1000,
+            action_key=(group, "action")
+        )
+
         exploration_policies[group] = TensorDictSequential(
             policy,
-            EGreedyModule(spec=env.full_action_spec[(group,"action")], 
-                          eps_init=0.2, 
-                          eps_end=0.01, 
-                          annealing_num_steps=1000,
-                          action_key=(group, "action"))
+            exploration_modules[group]
         )
 
     # Data collection
     agents_exploration_policy = TensorDictSequential(*exploration_policies.values())
 
-    print(policy_modules['player_0'])
+    # print(policy_modules['player_0'])
 
-
-
-    env.rollout(policy=TensorDictSequential(*policy_modules.values()), max_steps=5)
+    env.rollout(policy=TensorDictSequential(*policies.values()), max_steps=5)
 
     collector = SyncDataCollector(
         env, 
@@ -262,7 +274,7 @@ def main(args=None):
 
     replay_buffers = create_replay_buffers(args, device, env)
 
-    losses, target_updaters = create_loss_functions(env, policy_modules, critics, args)
+    losses, target_updaters = create_loss_functions(env, policies, critics, args)
 
     optimizers = create_optimizers(losses, args)
 
@@ -274,7 +286,7 @@ def main(args=None):
     episode_reward_mean_map = {group: [] for group in env.agent_names}
     train_group_map = copy.deepcopy(env.group_map)
 
-    for episode, batch in enumerate(collector):
+    for iteration, batch in enumerate(collector):
         current_frames = batch.numel()
         batch = process_batch(batch, env)
         for group in env.agent_names:
@@ -299,7 +311,7 @@ def main(args=None):
             
             target_updaters[group].step()
 
-        exploration_policies[group].step(current_frames)
+        exploration_modules[group].step(current_frames)
 
         if iteration == args.num_episodes//2:
             del train_group_map["agent"]
