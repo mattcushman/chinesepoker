@@ -25,7 +25,7 @@ def pad_list(l, length):
 
 class CPMLTorchMarlEnv(EnvBase):
     batch_locked = False
-    AVAILABLE_ACTIONS_LEN = 64
+    AVAILABLE_ACTIONS_LEN = 128
 
     def __init__(self, num_envs=10, num_players=2, hist_len=64, seed=None, device="cpu"):
         self.num_players = num_players
@@ -42,9 +42,17 @@ class CPMLTorchMarlEnv(EnvBase):
         self._make_spec(num_players, hist_len)
 
     def _reset(self, tensordict):
-        self.games = [CPGame.CPGame(self.agent_names,
-                      deck=torch.randperm(52, generator=self.rng).tolist()) 
-                      for _ in range(self.num_envs)]
+        if tensordict is None:
+            self.games = [CPGame.CPGame(self.agent_names,
+                        deck=torch.randperm(52, generator=self.rng).tolist()) 
+                        for _ in range(self.num_envs)]
+        else:
+            for reset_index in range(self.num_envs):
+                if tensordict["_reset"][reset_index]:
+                    self.games[reset_index] = CPGame.CPGame(self.agent_names,
+                                                            deck=torch.randperm(52, generator=self.rng).tolist()
+                                                            ) 
+
         return TensorDict({
             agent_name: TensorDict({
                "hand": torch.tensor([[[c in game.hands[agent_name] for c in range(52)]] for game in self.games], 

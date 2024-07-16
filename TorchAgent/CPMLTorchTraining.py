@@ -284,7 +284,6 @@ def main(args=None):
     )
 
     episode_reward_mean_map = {group: [] for group in env.agent_names}
-    train_group_map = copy.deepcopy(env.group_map)
 
     for iteration, batch in enumerate(collector):
         current_frames = batch.numel()
@@ -312,9 +311,6 @@ def main(args=None):
             target_updaters[group].step()
 
         exploration_modules[group].step(current_frames)
-
-        if iteration == args.num_episodes//2:
-            del train_group_map["agent"]
 
         for group in env.agent_names:
             episode_reward_mean = batch.get(("next", group, "reward"))[batch.get(("next", group, "done"))].mean().item()
