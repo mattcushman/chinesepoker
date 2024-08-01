@@ -5,9 +5,11 @@ from torchrl.envs.utils import check_env_specs, step_mdp
 from torchrl.envs import TransformedEnv, RewardSum, MarlGroupMapType
 import torch.nn.functional as fun
 from tensordict import TensorDict
+import numpy
 
 from TorchAgent.CPMLTorchEnv import CPMLTorchEnv
 from TorchAgent.CPMLTorchMarlEnv import CPMLTorchMarlEnv
+from CPServerSrc.CPGame import cardsToString
 
 def make_marl_action(action_dict, obs):
     for agent_name, action in action_dict.items():
@@ -79,7 +81,7 @@ def test_CMPLtorch_env_fullgame():
         action_lengths = [len(move) for move in actions_list]
         action_index = action_lengths.index(max(action_lengths))
         for i, move in enumerate(actions_list):
-            print(f"{i}: {torch_env.games[0].cardsToString(move)}")
+            print(f"{i}: {cardsToString(move)}")
         print(f"action index = {action_index}")
         print(f"action = {actions_list[action_index]}")
         obs = torch_env.step(TensorDict({"action": fun.one_hot(torch.tensor(len(actions_list)-1), 
@@ -143,18 +145,13 @@ def test_CMPLtorch_env_rollout_marl():
     torch_env = CPMLTorchMarlEnv(num_envs=1, seed=3)
     obs = torch_env.reset()
     assert torch_env.games[0].toMove == 'player_1'
-    obs = torch_env.rollout(5)
-    assert torch_env.games[0].toMove == 'player_0'
-    action_history_1 = obs['actionhistory'].numpy()
-    obs = torch_env.rollout(5)
+    obs = torch_env.rollout(20)
     assert torch_env.games[0].toMove == 'player_1'
-    action_history_2 = obs['actionhistory'].numpy()
-    for i in range(5):
-        assert (action_history_1[0,0,i] == action_history_2[0,0,5+i]).all()
-    obs = torch_env.rollout(10)
-    action_history_3 = obs['actionhistory'].numpy()
-    for i in range(10):
-        assert (action_history_2[0,0,i] == action_history_3[0,0,10+i]).all()
+    action_history_1 = obs['actionhistory'].numpy()
+    for i in range(18):
+        move_from_action_history = [card for card in range(52) if action_history_1[0,19,18-i,card] == 1]
+        move_from_game = torch_env.games[0].playerMoves[i][1]
+        assert move_from_action_history == move_from_game, f"Move {i} from action history {move_from_action_history} != move from game {move_from_game}"
 
 def test_CMPLtorch_env_fullgame_marl():
     torch_env = CPMLTorchMarlEnv(num_envs=1, seed=4)
@@ -167,7 +164,7 @@ def test_CMPLtorch_env_fullgame_marl():
         action_lengths = [len(move) for move in actions_list]
         action_index = action_lengths.index(max(action_lengths))
         for i, move in enumerate(actions_list):
-            print(f"{i}: {torch_env.games[0].cardsToString(move)}")
+            print(f"{i}: {cardsToString(move)}")
         print(f"action index = {action_index}")
         print(f"action = {actions_list[action_index]}")
         if round % 2 == 0:

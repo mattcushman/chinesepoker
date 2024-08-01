@@ -4,6 +4,12 @@ import numpy as np
 ranks = ['4','5','6','7','8','9','T','J','Q','K','A','2','3']
 suits = ['\u2666','\u2663','\u2665','\u2660']
 
+def cardToString(c):
+    return ranks[c // 4] + suits[c % 4]
+
+def cardsToString(cards):
+    return "-".join([cardToString(c) for c in sorted(cards)])
+
 class MoveError(Exception):
     def __init__(self, msg, move):
         self.msg=msg
@@ -66,9 +72,6 @@ class CPGame():
         self.playerMoves=[]
         self.winner=-1
 
-    def cardToString(self, c):
-        return ranks[c // 4] + suits[c % 4]
-
     def reward(self, player_name):
         if self.winner == -1:
             return 0
@@ -76,9 +79,6 @@ class CPGame():
             return 1
         else:
             return -1 
-
-    def cardsToString(self, cards):
-        return "-".join([self.cardToString(c) for c in sorted(cards)])
     
     def to_move_index(self):
         return self.players.index(self.toMove)
@@ -161,8 +161,19 @@ class CPGame():
         return any([len(hand)==0 for hand in self.hands.values()])
 
     def prettyState(self):
-        str = "\n".join(f'player={p} {[" ","*"][p==self.toMove]} hand={self.cardsToString(self.hands[p])}' for p in self.players)
+        str = "\n".join(f'player={p} {[" ","*"][p==self.toMove]} hand={cardsToString(self.hands[p])}' for p in self.players)
         if self.playerMoves == []:
             return f"Start: \n{str}"
         else:
-            return f"player={self.playerMoves[-1][0]} move=[{self.cardsToString(self.playerMoves[-1][1])}] \n"+str
+            return f"player={self.playerMoves[-1][0]} move=[{cardsToString(self.playerMoves[-1][1])}] \n"+str
+        
+    def pretty_print_game(self):
+        output = []
+        current_hands = self.hands.copy()
+        to_move = self.toMove
+        for (i, (player, move)) in reversed(list(enumerate(self.playerMoves))):
+            assert current_hands[player].isdisjoint(set(move))
+            current_hands[player] = current_hands[player].union(set(move))
+            output += [f"player={player} move=[{cardsToString(move)}] hand=[{cardsToString(current_hands[player])}]"]
+        return reversed(output)
+

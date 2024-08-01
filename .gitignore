@@ -4,3 +4,7 @@ __pycache__/
 .vscode/
 .conda/bin/2to3
 .pytest_cache/
+sample_trajectories/
+sample_trajectories/*
+saved_models/
+saved_models/*

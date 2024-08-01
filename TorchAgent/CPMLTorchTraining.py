@@ -19,6 +19,8 @@ import multiprocessing
 
 from tqdm import tqdm
 
+from CPServerSrc.CPGame import cardsToString
+
 def group_observation_keys(group):
     return ["tomove", "actionhistory", (group, "hand"), (group, "available_actions"), (group, "num_actions")]
 
@@ -202,16 +204,39 @@ def process_batch(batch: TensorDictBase, env) -> TensorDictBase:
             )
     return batch
 
+def pretty_print_game(actionhistory):
+    out = ""
+    for i in range(actionhistory.shape[0]):
+        cards = [card for card in range(52) if actionhistory[i,card] == 1]
+        out += f"Move {i}: {cardsToString(cards)}\n"
+    return out
 
-# define the main function
-def main(args=None):
-    # parse command line parameters
-    args = parse_args(args)
+def save_sample_trajectories(policies, name, n=10):
+    # open file named "name" for writing
+    # create 10 trajectories and output the game as logged in the environment game
+    with open(name, "w") as f:
+        env = create_environment(seed=0, num_envs=1, device=torch.device("cpu"))
+        for i in range(n):
+            obs = env.reset()
+            done = False
+            obs = env.rollout(policy=TensorDictSequential(*policies.values()), 
+                              max_steps=100)
+            assert env.games[0].done()
+            f.write("*******************************************************\n")
+            f.write(f"Game number {i}\n")
+            for line in env.games[0].pretty_print_game():
+                f.write(line+"\n")
+            f.write(env.games[0].prettyState()+"\n\n")
 
-    device = setup()
-    # create the environment
-    base_env = CPMLTorchMarlEnv(seed=args.seed,
-                               num_envs=args.batch_size,
+def save_models(args, policies, critics):
+    for group, policy in policies.items():
+        torch.save(policy.state_dict(), f"{args.save_model_path}/policy_{group}_policy.pth")
+    for group, critic in critics.items():
+        torch.save(critic.state_dict(), f"{args.save_model_path}/critic_{group}_critic.pth")
+
+def create_environment(seed, num_envs, device):
+    base_env = CPMLTorchMarlEnv(seed=seed,
+                               num_envs=num_envs,
                                device=device
                                )
     
@@ -227,19 +252,21 @@ def main(args=None):
         base_env,
         long_to_float_transform,
     )
+    return env
+
+# define the main function
+def main(args=None):
+    # parse command line parameters
+    args = parse_args(args)
+
+    device = setup()
+    # create the environment
+
+    env = create_environment(args.seed, args.batch_size, device)
 
     policy_modules = make_policy_modules(env)
     policies = make_policies(env, policy_modules)
     critics = make_critics(args, env)
-
-    # td = env.reset()
-    # print(td)
-    # td = policy_modules['player_0'](td)
-    # td = policy_modules['player_1'](td)
-    # print('************************************************************************************************')
-    # print(td)
-    # print('************************************************************************************************')
-    # env.step(td)
 
     # do we need to create some exploration policies here?
     exploration_modules = {}
@@ -259,8 +286,6 @@ def main(args=None):
 
     # Data collection
     agents_exploration_policy = TensorDictSequential(*exploration_policies.values())
-
-    # print(policy_modules['player_0'])
 
     env.rollout(policy=TensorDictSequential(*policies.values()), max_steps=5)
 
@@ -322,6 +347,10 @@ def main(args=None):
         )
         progress_bar.update()
 
+        save_sample_trajectories(policies, name=f"{args.sample_trajectories_dir}/sample_trajectories_{iteration}", n=10)
+
+    save_models(args, policies, critics)
+
 
 def setup():
     is_fork = multiprocessing.get_start_method() == "fork"
@@ -357,8 +386,11 @@ def parse_args(args):
     parser.add_argument("--share-params-critic", type=bool, default=True)
     parser.add_argument("--centralised-critic", type=bool, default=True)
     parser.add_argument("--memory-size", type=int, default=1000000)
+    parser.add_argument("--save_model_path", type=str, default="saved_models")
+    parser.add_argument("--sample_trajectories_dir", type=str, default="sample_trajectories")
     return parser.parse_args(args)
 
 if __name__ == "__main__":
     main()
-    assert False
+    assert True
+    print("Done.")
