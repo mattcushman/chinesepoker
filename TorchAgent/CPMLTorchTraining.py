@@ -66,29 +66,13 @@ def num_observation_dimensions(env, group):
 def make_policy_modules(env):
     policy_modules = {}
     for group in env.agent_names:
-        # group_observation_key = (group, "all_observations")
-        # cat_module = make_observation_module(env, group, group_observation_key)
-        # policy_net = MultiAgentMLP(
-        #     n_agent_inputs=num_observation_dimensions(env, group),
-        #     n_agent_outputs=env.AVAILABLE_ACTIONS_LEN,
-        #     n_agents=1,
-        #     share_params=False,
-        #     device=env.device,
-        #     depth=2,
-        #     num_cells=128,
-        #     activation_class=nn.ReLU,
-        #     centralised=False,
-        # )
-
         policy_net = MLP(
             in_features=num_observation_dimensions(env, group),
             out_features=env.AVAILABLE_ACTIONS_LEN,
-            depth=2,
-            num_cells=128,
+            depth=3,
+            num_cells=256,
             activation_class=nn.ReLU,
         )
-
-        # policy_modules[group] = TensorDictSequential(cat_module, policy_module)
         policy_modules[group] = policy_net
     return policy_modules
 
@@ -121,8 +105,8 @@ def make_critics(args, env):
                 n_agents=1,
                 share_params=args.share_params_critic,
                 device=env.device,
-                depth=2,
-                num_cells=128,
+                depth=3,
+                num_cells=256,
                 activation_class=nn.ReLU,
                 centralised=args.centralised_critic,
             ),
@@ -154,6 +138,7 @@ def create_loss_functions(env, policy_modules, critics, args):
             value_network = critics[group],
             delay_value = True,
             loss_function = "l2",
+            reduction="sum",
         )
         loss_module.set_keys(
             state_action_value=(group, "state_action_value"),
@@ -161,7 +146,8 @@ def create_loss_functions(env, policy_modules, critics, args):
             done=(group, "done"),
             terminated=(group, "terminated"),
         )
-        loss_module.make_value_estimator(ValueEstimators.TD0, gamma=args.gamma)        
+        # loss_module.make_value_estimator(ValueEstimators.TD0, gamma=args.gamma)        
+        loss_module.make_value_estimator(ValueEstimators.TDLambda)        
         losses[group] = loss_module
         target_updaters[group] = SoftUpdate(loss_module, tau=args.polyak_tau)
     return losses, target_updaters
@@ -287,8 +273,6 @@ def main(args=None):
     # Data collection
     agents_exploration_policy = TensorDictSequential(*exploration_policies.values())
 
-    env.rollout(policy=TensorDictSequential(*policies.values()), max_steps=5)
-
     collector = SyncDataCollector(
         env, 
         agents_exploration_policy,
@@ -366,17 +350,12 @@ def setup():
 def parse_args(args):
     parser = argparse.ArgumentParser()
     parser.add_argument("--num-episodes", type=int, default=1000)
-    parser.add_argument("--batch-size", type=int, default=32)
-    parser.add_argument("--training-batch-size", type=int, default=128)
+    parser.add_argument("--batch-size", type=int, default=128)
+    parser.add_argument("--training-batch-size", type=int, default=256)
     parser.add_argument("--num-optimizer-steps", type=int, default=100)
-    parser.add_argument("--learning-rate", type=float, default=0.001)
+    parser.add_argument("--learning-rate", type=float, default=0.005)
     parser.add_argument("--gamma", type=float, default=0.99)
-    parser.add_argument("--lambda", type=float, default=0.95)
-    parser.add_argument("--epsilon", type=float, default=0.1)
-    parser.add_argument("--epsilon-decay", type=float, default=0.995)
-    parser.add_argument("--epsilon-min", type=float, default=0.01)
-    parser.add_argument("--clip-epsilon", type=float, default=0.2)
-    parser.add_argument("--polyak-tau", type=float, default=0.005)
+    parser.add_argument("--polyak-tau", type=float, default=0.01)
     parser.add_argument("--update-target-every", type=int, default=100)
     parser.add_argument("--save-model-every", type=int, default=100)
     parser.add_argument("--load-model", type=str, default=None)
