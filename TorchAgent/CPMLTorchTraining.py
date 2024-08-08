@@ -69,7 +69,7 @@ def make_policy_modules(env):
         policy_net = MLP(
             in_features=num_observation_dimensions(env, group),
             out_features=env.AVAILABLE_ACTIONS_LEN,
-            depth=3,
+            depth=4,
             num_cells=256,
             activation_class=nn.ReLU,
         )
@@ -105,7 +105,7 @@ def make_critics(args, env):
                 n_agents=1,
                 share_params=args.share_params_critic,
                 device=env.device,
-                depth=3,
+                depth=4,
                 num_cells=256,
                 activation_class=nn.ReLU,
                 centralised=args.centralised_critic,
@@ -138,7 +138,7 @@ def create_loss_functions(env, policy_modules, critics, args):
             value_network = critics[group],
             delay_value = True,
             loss_function = "l2",
-            reduction="sum",
+            reduction="mean",
         )
         loss_module.set_keys(
             state_action_value=(group, "state_action_value"),
@@ -149,7 +149,9 @@ def create_loss_functions(env, policy_modules, critics, args):
         # loss_module.make_value_estimator(ValueEstimators.TD0, gamma=args.gamma)        
         loss_module.make_value_estimator(ValueEstimators.TDLambda)        
         losses[group] = loss_module
-        target_updaters[group] = SoftUpdate(loss_module, tau=args.polyak_tau)
+
+    target_updaters = {group: SoftUpdate(loss, tau=args.polyak_tau) for group, loss in losses.items()}
+
     return losses, target_updaters
 
 def create_optimizers(losses, args):
@@ -248,7 +250,7 @@ def main(args=None):
     device = setup()
     # create the environment
 
-    env = create_environment(args.seed, args.batch_size, device)
+    env = create_environment(args.seed, args.num_envs, device)
 
     policy_modules = make_policy_modules(env)
     policies = make_policies(env, policy_modules)
@@ -259,8 +261,8 @@ def main(args=None):
     exploration_policies = {}
     for group, policy in policies.items():
         exploration_modules[group] = EGreedyModule(spec=env.full_action_spec[(group,"action")], 
-            eps_init=0.2, 
-            eps_end=0.01, 
+            eps_init=0.25, 
+            eps_end=0.02, 
             annealing_num_steps=1000,
             action_key=(group, "action")
         )
@@ -277,8 +279,8 @@ def main(args=None):
         env, 
         agents_exploration_policy,
         device=device,
-        frames_per_batch=args.batch_size,
-        total_frames=args.num_episodes * args.batch_size,
+        frames_per_batch=args.frames_per_batch,
+        total_frames=args.num_episodes * args.frames_per_batch,
     )
 
     replay_buffers = create_replay_buffers(args, device, env)
@@ -313,13 +315,16 @@ def main(args=None):
                     optimizer = optimizers[group][loss_name]
                     loss.backward()
 
-                    # do i nbeed to add clipping here?
+                    # is this clipping correct?
+                    params = optimizer.param_groups[0]["params"]
+                    torch.nn.utils.clip_grad_norm_(params, 1.0)
+
                     optimizer.step()
                     optimizer.zero_grad()
             
-            target_updaters[group].step()
+                target_updaters[group].step()
 
-        exploration_modules[group].step(current_frames)
+            exploration_modules[group].step(current_frames)
 
         for group in env.agent_names:
             episode_reward_mean = batch.get(("next", group, "reward"))[batch.get(("next", group, "done"))].mean().item()
@@ -349,15 +354,14 @@ def setup():
 # parse command line parameters for machine learning training
 def parse_args(args):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--num-episodes", type=int, default=1000)
-    parser.add_argument("--batch-size", type=int, default=128)
-    parser.add_argument("--training-batch-size", type=int, default=256)
+    parser.add_argument("--num-episodes", type=int, default=1100)
+    parser.add_argument("--num-envs", type=int, default=12)
+    parser.add_argument("--frames_per_batch", type=int, default=1024)
+    parser.add_argument("--training-batch-size", type=int, default=512)
     parser.add_argument("--num-optimizer-steps", type=int, default=100)
     parser.add_argument("--learning-rate", type=float, default=0.005)
     parser.add_argument("--gamma", type=float, default=0.99)
-    parser.add_argument("--polyak-tau", type=float, default=0.01)
-    parser.add_argument("--update-target-every", type=int, default=100)
-    parser.add_argument("--save-model-every", type=int, default=100)
+    parser.add_argument("--polyak-tau", type=float, default=0.5)
     parser.add_argument("--load-model", type=str, default=None)
     parser.add_argument("--save-model", type=str, default=None)
     parser.add_argument("--seed", type=int, default=0)
