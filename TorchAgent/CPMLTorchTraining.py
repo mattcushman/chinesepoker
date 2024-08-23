@@ -12,6 +12,7 @@ from torchrl.envs import TransformedEnv, RewardSum, DTypeCastTransform, Compose,
 from torchrl.collectors import SyncDataCollector
 from torchrl.data import LazyMemmapStorage, RandomSampler, ReplayBuffer
 from torchrl.objectives import DDPGLoss, SoftUpdate, ValueEstimators
+from torchrl.envs.utils import step_mdp
 
 from TorchAgent.CPMLTorchMarlEnv import CPMLTorchMarlEnv
 
@@ -72,6 +73,7 @@ def make_policy_modules(env):
             depth=4,
             num_cells=256,
             activation_class=nn.ReLU,
+            device=env.device,
         )
         policy_modules[group] = policy_net
     return policy_modules
@@ -105,7 +107,7 @@ def make_critics(args, env):
                 n_agents=1,
                 share_params=args.share_params_critic,
                 device=env.device,
-                depth=4,
+                depth=3,
                 num_cells=256,
                 activation_class=nn.ReLU,
                 centralised=args.centralised_critic,
@@ -122,7 +124,7 @@ def create_replay_buffers(args, device, env):
     for group in env.agent_names:
         replay_buffers[group] = ReplayBuffer(
             storage=LazyMemmapStorage(
-                args.memory_size,  #device=device
+                args.memory_size,
             ),
             sampler=RandomSampler(),
             batch_size=args.training_batch_size,
@@ -138,7 +140,7 @@ def create_loss_functions(env, policy_modules, critics, args):
             value_network = critics[group],
             delay_value = True,
             loss_function = "l2",
-            reduction="mean",
+#            reduction="mean",
         )
         loss_module.set_keys(
             state_action_value=(group, "state_action_value"),
@@ -146,8 +148,8 @@ def create_loss_functions(env, policy_modules, critics, args):
             done=(group, "done"),
             terminated=(group, "terminated"),
         )
-        # loss_module.make_value_estimator(ValueEstimators.TD0, gamma=args.gamma)        
-        loss_module.make_value_estimator(ValueEstimators.TDLambda)        
+        loss_module.make_value_estimator(ValueEstimators.TD0, gamma=args.gamma)        
+        # loss_module.make_value_estimator(ValueEstimators.TDLambda)        
         losses[group] = loss_module
 
     target_updaters = {group: SoftUpdate(loss, tau=args.polyak_tau) for group, loss in losses.items()}
@@ -199,22 +201,28 @@ def pretty_print_game(actionhistory):
         out += f"Move {i}: {cardsToString(cards)}\n"
     return out
 
-def save_sample_trajectories(policies, name, n=10):
+def save_sample_trajectories(policies, critics, name, n=10):
     # open file named "name" for writing
     # create 10 trajectories and output the game as logged in the environment game
     with open(name, "w") as f:
-        env = create_environment(seed=0, num_envs=1, device=torch.device("cpu"))
         for i in range(n):
-            obs = env.reset()
-            done = False
-            obs = env.rollout(policy=TensorDictSequential(*policies.values()), 
-                              max_steps=100)
-            assert env.games[0].done()
             f.write("*******************************************************\n")
             f.write(f"Game number {i}\n")
-            for line in env.games[0].pretty_print_game():
-                f.write(line+"\n")
-            f.write(env.games[0].prettyState()+"\n\n")
+            env = create_environment(1001+i, 1, torch.device("cpu"))
+            obs = env.reset()
+            while not env.games[0].done():
+                player = env.games[0].toMove
+                f.write(env.games[0].prettyState()+"\n")
+                device = policies[player].device
+                action = policies[player](obs.to(device))
+                obs = env.step(action)
+                value = critics[player](obs)[(player, "state_action_value")].item()
+                f.write(f"Critic value: {value:8.4f}\n")
+                obs = step_mdp(obs, keep_other=True)
+                cards = [card for card in range(52) if obs["actionhistory"][0,0,card] == 1]
+                f.write(f"Player {player} move: {cardsToString(cards)}\n")
+                f.write("   ---")
+
 
 def save_models(args, policies, critics):
     for group, policy in policies.items():
@@ -260,11 +268,12 @@ def main(args=None):
     exploration_modules = {}
     exploration_policies = {}
     for group, policy in policies.items():
-        exploration_modules[group] = EGreedyModule(spec=env.full_action_spec[(group,"action")], 
+        exploration_modules[group] = EGreedyModule(
+            spec=env.full_action_spec[(group,"action")], 
             eps_init=0.25, 
             eps_end=0.02, 
             annealing_num_steps=1000,
-            action_key=(group, "action")
+            action_key=(group, "action"),
         )
 
         exploration_policies[group] = TensorDictSequential(
@@ -307,7 +316,7 @@ def main(args=None):
             replay_buffers[group].extend(group_batch)
 
             for _ in range(args.num_optimizer_steps):
-                subdata = replay_buffers[group].sample()
+                subdata = replay_buffers[group].sample().to(device)
                 loss_vals = losses[group](subdata)
 
                 for loss_name in ["loss_actor", "loss_value"]:
@@ -336,7 +345,7 @@ def main(args=None):
         )
         progress_bar.update()
 
-        save_sample_trajectories(policies, name=f"{args.sample_trajectories_dir}/sample_trajectories_{iteration}", n=10)
+        save_sample_trajectories(policies, critics, name=f"{args.sample_trajectories_dir}/sample_trajectories_{iteration}", n=10)
 
     save_models(args, policies, critics)
 
@@ -355,11 +364,11 @@ def setup():
 def parse_args(args):
     parser = argparse.ArgumentParser()
     parser.add_argument("--num-episodes", type=int, default=1100)
-    parser.add_argument("--num-envs", type=int, default=12)
+    parser.add_argument("--num-envs", type=int, default=16)
     parser.add_argument("--frames_per_batch", type=int, default=1024)
     parser.add_argument("--training-batch-size", type=int, default=512)
     parser.add_argument("--num-optimizer-steps", type=int, default=100)
-    parser.add_argument("--learning-rate", type=float, default=0.005)
+    parser.add_argument("--learning-rate", type=float, default=0.00001)
     parser.add_argument("--gamma", type=float, default=0.99)
     parser.add_argument("--polyak-tau", type=float, default=0.5)
     parser.add_argument("--load-model", type=str, default=None)
