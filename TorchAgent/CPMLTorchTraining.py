@@ -131,12 +131,12 @@ def create_replay_buffers(args, device, env):
         )
     return replay_buffers
 
-def create_loss_functions(env, policy_modules, critics, args):
+def create_loss_functions(env, policies, critics, args):
     losses = {}
     target_updaters = {}
     for group in env.agent_names:
         loss_module = DDPGLoss(
-            actor_network = policy_modules[group],
+            actor_network = policies[group],
             value_network = critics[group],
             delay_value = True,
             loss_function = "l2",
@@ -322,6 +322,7 @@ def main(args=None):
                 for loss_name in ["loss_actor", "loss_value"]:
                     loss = loss_vals[loss_name]
                     optimizer = optimizers[group][loss_name]
+                    optimizer.zero_grad()
                     loss.backward()
 
                     # is this clipping correct?
@@ -329,7 +330,6 @@ def main(args=None):
                     torch.nn.utils.clip_grad_norm_(params, 1.0)
 
                     optimizer.step()
-                    optimizer.zero_grad()
             
                 target_updaters[group].step()
 
